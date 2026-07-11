@@ -5,40 +5,39 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * =============================================================================
+ * Design Token 体系
+ * =============================================================================
+ *
+ * 三层 Token 模型：
+ *   Primitive  — 原始色值，仅在 :root 中以具体数值定义
+ *   Semantic   — 按业务用途命名的别名，组件代码只允许引用这一层
+ *   Component  — 仅在一个组件内使用的值，不进全局 token，在组件内定义
+ *
+ * Token 来源：prototype/ 目录三份原型页面（首页 / 企业卡片 / 政策卡片）
+ * 提取依据：首页.html :root 变量块（作者收敛的设计意图） + 三页语义聚类
+ *
+ * 命名原则：按用途命名，不按外观命名
+ *   ✅ --match-high / --match-mid / --match-low
+ *   ❌ --green / --purple / --orange（此类按颜色命名的变量已下沉为 component-local）
+ */
+
+/* ===========================================================================
+ * @theme inline — 将 CSS 变量注册为 Tailwind 颜色工具类
+ *
+ * 注册后即可使用 Tailwind 工具类写法：
+ *   text-primary / bg-primary / border-primary
+ *   text-match-high / bg-match-high
+ *   text-success / bg-success
+ *   等等
+ * =========================================================================== */
 @theme inline {
+    /* ---------- 字体 ---------- */
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
-    --color-sidebar-ring: var(--sidebar-ring);
-    --color-sidebar-border: var(--sidebar-border);
-    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-    --color-sidebar-accent: var(--sidebar-accent);
-    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-    --color-sidebar-primary: var(--sidebar-primary);
-    --color-sidebar-foreground: var(--sidebar-foreground);
-    --color-sidebar: var(--sidebar);
-    --color-chart-5: var(--chart-5);
-    --color-chart-4: var(--chart-4);
-    --color-chart-3: var(--chart-3);
-    --color-chart-2: var(--chart-2);
-    --color-chart-1: var(--chart-1);
-    --color-ring: var(--ring);
-    --color-input: var(--input);
-    --color-border: var(--border);
-    --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
-    --color-muted-foreground: var(--muted-foreground);
-    --color-muted: var(--muted);
-    --color-secondary-foreground: var(--secondary-foreground);
-    --color-secondary: var(--secondary);
-    --color-primary-foreground: var(--primary-foreground);
-    --color-primary: var(--primary);
-    --color-popover-foreground: var(--popover-foreground);
-    --color-popover: var(--popover);
-    --color-card-foreground: var(--card-foreground);
-    --color-card: var(--card);
-    --color-foreground: var(--foreground);
-    --color-background: var(--background);
+
+    /* ---------- 圆角（shadcn 派生体系，保持不动） ---------- */
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -46,33 +45,193 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* ========== shadcn 已有语义槽位（替换品牌色后联动调整） ========== */
+
+    /* 品牌主色 — 原型 :root 声明 #1677ff，全站按钮/链接/高亮/选中态 */
+    --color-primary: var(--primary);
+    /* 主色上的文字色 — 保持白色，确保与主色对比度 */
+    --color-primary-foreground: var(--primary-foreground);
+    /* 次级色 — 保持中性灰，用于次要按钮/次要强调 */
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    /* 弱化背景 — 用于大面积中性背景（表格斑马纹、禁用态等） */
+    --color-muted: var(--muted);
+    /* 弱化文字 — 用于次要信息、辅助说明 */
+    --color-muted-foreground: var(--muted-foreground);
+    /* 悬浮/选中态背景 — 原型浅蓝 #eef6ff，替换 shadcn 默认中性灰 */
+    --color-accent: var(--accent);
+    /* 悬浮/选中态文字 — 跟随主色 */
+    --color-accent-foreground: var(--accent-foreground);
+    /* 危险操作/错误态 — 原型截止日期红色 #dc2626 */
+    --color-destructive: var(--destructive);
+
+    /* 页面底色 — 白色（浅色模式） */
+    --color-background: var(--background);
+    /* 正文文字色 — 原型 #172033 */
+    --color-foreground: var(--foreground);
+    /* 卡片底色 */
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    /* 弹出层底色 */
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    /* 边框色 — 原型 #e7edf6，用于卡片/表格/分割线边框 */
+    --color-border: var(--border);
+    /* 输入框边框 — 原型 #d1d5db */
+    --color-input: var(--input);
+    /* Focus 环 — 跟随主色 */
+    --color-ring: var(--ring);
+
+    /* 图表配色序列（保持 shadcn 默认，不强制覆盖） */
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    /* 侧边栏（保持 shadcn 默认） */
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* ========== 新增业务语义槽位（shadcn 默认没有） ========== */
+
+    /*
+     * 匹配度三色 — 项目核心业务概念
+     *
+     * 使用场景：政策匹配表格的匹配度列、匹配度进度条、匹配度图例、
+     *          企业卡片匹配概览、政策详情页高/中/低匹配企业 Tabs
+     * 设计理由：shadcn 无对应槽位，三色跨 4+ 组件复用，满足"复用性/易变性/语义独立性"三条法则
+     * 命名原则：按"匹配度"业务角色命名，不按颜色命名（❌ --green / --orange / --blue）
+     */
+    --color-match-high: var(--match-high);   /* 高匹配 ≥80% — 绿色 */
+    --color-match-mid: var(--match-mid);     /* 中匹配 50%~80% — 橙色 */
+    --color-match-low: var(--match-low);     /* 低匹配 20%~50% — 蓝色 */
+
+    /*
+     * 成功 / 警告 — 通用状态语义
+     *
+     * 使用场景：任务完成标记、申报中状态、材料已补齐、
+     *          即将截止提醒、待确认条件
+     * 设计理由：与 match-high / match-mid 当前同值，但保持独立 token 名，
+     *          防止未来"成功色"和"高匹配色"需要分叉时无法独立调整
+     */
+    --color-success: var(--success);         /* 成功/完成 — 绿色 */
+    --color-warning: var(--warning);         /* 警告/注意 — 橙色 */
+
+    /*
+     * 截止日期紧急色
+     *
+     * 使用场景：政策申报截止日期倒计时、逾期状态标签、删除按钮
+     * 设计理由：三页中多处出现红色截止日期（企业卡片表格、政策卡片详情、今日快讯），
+     *          与 destructive 语义不完全等价（destructive 是"破坏性操作"，deadline-urgent 是"时效紧迫"），
+     *          但使用相同色值，保持视觉统一
+     */
+    --color-deadline-urgent: var(--deadline-urgent);
+
+    /*
+     * 主色渐变终点
+     *
+     * 使用场景：Header 渐变背景、AI 聊天气泡用户侧、主按钮渐变
+     * 设计理由：原型大量使用 `linear-gradient(135deg, #1677ff, #22c7ff)` 作为主色渐变，
+     *          这是一个统一的设计决策，独立于主色本身的色值，
+     *          未来可能独立调整渐变终点而不影响主色
+     */
+    --color-primary-gradient-end: var(--primary-gradient-end);
 }
 
+/* ===========================================================================
+ * :root — 浅色模式
+ *
+ * 所有值来源于原型 :root 变量块（首页.html:339-351）及三页语义聚类收敛结果。
+ * 每个 token 下方标注了设计来源和具体使用场景。
+ * =========================================================================== */
 :root {
+    /* ---------- 页面/卡片/弹出层底色 ---------- */
+    /* 原型页面底色 #f9fafb（首页最终统一轮），保持 shadcn 默认白色 */
     --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    /* 正文文字色 — 原型 :root --text-main: #172033，用于标题/正文/重要信息 */
+    --foreground: oklch(0.21 0.02 264);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.21 0.02 264);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.488 0.243 264.376);
+    --popover-foreground: oklch(0.21 0.02 264);
+
+    /* ---------- 品牌主色 ---------- */
+    /*
+     * 品牌主色 — 原型 :root --primary: #1677ff
+     * 使用场景：按钮/链接/选中态/高亮文字/主色图标/Tab 激活态
+     * 对应 shadcn 槽位：--primary
+     * 联动检查：替换后需同步调整 --accent（悬浮态背景）和 --ring（focus 环）
+     */
+    --primary: oklch(0.546 0.245 262.881);
+    /* 主色上的文字 — 白色，确保 WCAG 对比度 */
     --primary-foreground: oklch(0.97 0.014 254.604);
+
+    /* ---------- 次级色（保持中性灰，不跟随主色） ---------- */
+    /* 原型中次级元素（次要按钮、标签背景）使用中性灰，无需跟随品牌色调整 */
     --secondary: oklch(0.967 0.001 286.375);
     --secondary-foreground: oklch(0.21 0.006 285.885);
+
+    /* ---------- 弱化色 ---------- */
+    /* 弱化背景 — 用于表格斑马纹、禁用态 */
     --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    /*
+     * 弱化文字 — 原型 :root --text-sub: #6b7280
+     * 使用场景：辅助说明文字、标签副标题、次要数据
+     */
+    --muted-foreground: oklch(0.55 0.013 265);
+
+    /* ---------- 悬浮/选中态 ---------- */
+    /*
+     * 悬浮态背景 — 原型 :root --primary-soft: #eef6ff
+     * 使用场景：表格行 hover、标签 hover、建议项 hover、选中态背景
+     * 设计理由：主色替换后，accent 必须从 shadcn 默认中性灰调整为主色的浅色版本，
+     *          否则会出现"主色是新蓝，但 hover 背景还是旧色系"的违和感
+     */
+    --accent: oklch(0.967 0.014 254.604);
+    /* 悬浮态文字 — 跟随主色 */
+    --accent-foreground: oklch(0.546 0.245 262.881);
+
+    /* ---------- 危险/破坏 ---------- */
+    /*
+     * 危险色 — 原型截止日期红色 #dc2626
+     * 使用场景：删除按钮、逾期状态、申报截止日期（红色文字）
+     */
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+
+    /* ---------- 边框/输入框/Focus 环 ---------- */
+    /*
+     * 边框色 — 原型 :root --line: #e7edf6
+     * 使用场景：卡片边框、表格边框、分割线、AI 聊天气泡边框
+     */
+    --border: oklch(0.93 0.01 258);
+    /*
+     * 输入框边框 — 原型 #d1d5db
+     * 使用场景：输入框默认边框色（focus 时切换为 --ring）
+     */
+    --input: oklch(0.87 0.005 260);
+    /* Focus 环 — 跟随主色，确保输入框/按钮 focus 时视觉反馈与品牌色一致 */
+    --ring: oklch(0.546 0.245 262.881);
+
+    /* ---------- 图表配色（保持 shadcn 默认，不对齐原型） ---------- */
     --chart-1: oklch(0.809 0.105 251.813);
     --chart-2: oklch(0.623 0.214 259.815);
     --chart-3: oklch(0.546 0.245 262.881);
     --chart-4: oklch(0.488 0.243 264.376);
     --chart-5: oklch(0.424 0.199 265.638);
+
+    /* ---------- 圆角基准值 ---------- */
     --radius: 0.625rem;
+
+    /* ---------- 侧边栏（保持 shadcn 默认） ---------- */
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.546 0.245 262.881);
@@ -81,8 +240,86 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* =======================================================================
+     * 新增业务语义 Token（shadcn 默认主题没有对应槽位）
+     * ======================================================================= */
+
+    /*
+     * 匹配度-高 — #16a34a (green-600)
+     * 来源：企业卡片页面表格匹配度列、政策卡片页面高匹配企业 Tab
+     * 使用场景：高匹配度百分比数字、进度条、图例、标签
+     * 设计理由：三页中两页使用绿色表示高匹配，收敛为统一值
+     */
+    --match-high: #16a34a;
+
+    /*
+     * 匹配度-中 — #ea580c (orange-600)
+     * 来源：企业卡片页面表格匹配度列、政策卡片页面中匹配企业 Tab
+     * 使用场景：中匹配度百分比数字、进度条、图例、标签
+     * 设计理由：三页中两页使用橙色表示中匹配，收敛为统一值
+     */
+    --match-mid: #ea580c;
+
+    /*
+     * 匹配度-低 — #2563eb (blue-600)
+     * 来源：企业卡片页面使用蓝色（#3b82f6），收敛为与品牌色系一致的 #2563eb
+     * 使用场景：低匹配度百分比数字、进度条、图例、标签
+     * 设计理由：与高（绿）中（橙）形成清晰三色阶梯，避免灰色与"未培育/无数据"状态混淆
+     */
+    --match-low: #2563eb;
+
+    /*
+     * 成功 — #16a34a (green-600)
+     * 使用场景：任务完成标记、"申报中"状态标签、材料已补齐标记、已完成状态
+     * 设计理由：与 --match-high 当前同值，但语义独立。未来如果"高匹配"和"成功"需要分叉
+     *          （如高匹配改翠绿、成功保持深绿），只需改此变量，组件代码不动
+     */
+    --success: #16a34a;
+
+    /*
+     * 警告 — #ea580c (orange-600)
+     * 使用场景：即将截止标签、待确认条件、临近截止日期
+     * 设计理由：与 --match-mid 当前同值，但语义独立（"匹配度中等"≠"警告"）
+     */
+    --warning: #ea580c;
+
+    /*
+     * 截止日期紧急 — #dc2626 (red-600)
+     * 使用场景：政策申报截止日期倒计时（<7天）、逾期状态、"7天内截止"标签
+     * 设计理由：三页中多处出现红色截止日期，品质独立于 destructive（破坏性操作），
+     *          但使用相同色值，保持视觉统一
+     */
+    --deadline-urgent: #dc2626;
+
+    /*
+     * 主色渐变终点 — #22c7ff
+     * 来源：原型 :root --primary-2: #22c7ff
+     * 使用场景：Header 渐变背景 `linear-gradient(135deg, #1677ff, #22c7ff)`、
+     *          AI 聊天用户气泡、主按钮渐变、分段控件激活态
+     * 设计理由：这是原型中一个明确的设计决策——主色态元素使用渐变而非纯色。
+     *          独立于 --primary 本身，未来可单独调整渐变终点
+     */
+    --primary-gradient-end: #22c7ff;
+
+    /*
+     * 卡片阴影 — 原型 :root --card-shadow: 0 12px 30px rgba(31,89,171,.08)
+     * 来源：原型 :root --card-shadow
+     * 使用场景：卡片、面板、AI 侧边栏、弹窗的 box-shadow
+     * 设计理由：原型统一使用带品牌蓝色调的阴影（而非纯黑灰），
+     *          这是一个独立于 shadcn 默认阴影体系的设计决策
+     */
+    --card-shadow: 0 12px 30px rgba(31, 89, 171, 0.08);
 }
 
+/* ===========================================================================
+ * .dark — 暗色模式
+ *
+ * 原型没有暗色模式设计，以下值基于浅色模式推导：
+ *   - 主色/强调色：在暗色背景下适当提亮，保持视觉识别度
+ *   - 背景：使用 shadcn 暗色模式默认值
+ *   - 业务语义色：根据浅色值推算暗色对应色
+ * =========================================================================== */
 .dark {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
@@ -90,23 +327,33 @@
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.424 0.199 265.638);
+
+    /* 暗色模式主色：适当提亮以保持对比度 */
+    --primary: oklch(0.623 0.214 259.815);
     --primary-foreground: oklch(0.97 0.014 254.604);
+
     --secondary: oklch(0.274 0.006 286.033);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
     --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+
+    /* 暗色模式悬浮态：在暗背景上使用稍亮的蓝色调 */
+    --accent: oklch(0.269 0.04 260);
+    --accent-foreground: oklch(0.9 0.02 254);
+
+    /* 暗色模式危险色：在暗背景上适当提亮 */
     --destructive: oklch(0.704 0.191 22.216);
+
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
+
     --chart-1: oklch(0.809 0.105 251.813);
     --chart-2: oklch(0.623 0.214 259.815);
     --chart-3: oklch(0.546 0.245 262.881);
     --chart-4: oklch(0.488 0.243 264.376);
     --chart-5: oklch(0.424 0.199 265.638);
+
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.623 0.214 259.815);
@@ -115,6 +362,53 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* ========== 暗色模式业务语义 Token ========== */
+
+    /*
+     * 匹配度-高（暗色）：在暗背景上使用更亮的绿色，保持视觉识别度
+     * 浅色 #16a34a → 暗色 #22c55e
+     */
+    --match-high: #22c55e;
+
+    /*
+     * 匹配度-中（暗色）：在暗背景上适当提亮
+     * 浅色 #ea580c → 暗色 #f97316
+     */
+    --match-mid: #f97316;
+
+    /*
+     * 匹配度-低（暗色）：在暗背景上使用更亮的蓝色
+     * 浅色 #2563eb → 暗色 #60a5fa
+     */
+    --match-low: #60a5fa;
+
+    /*
+     * 成功（暗色）：与 match-high 暗色值一致，但保持独立 token 名
+     */
+    --success: #22c55e;
+
+    /*
+     * 警告（暗色）：与 match-mid 暗色值一致，但保持独立 token 名
+     */
+    --warning: #f97316;
+
+    /*
+     * 截止日期紧急（暗色）：在暗背景上使用更亮的红色
+     * 浅色 #dc2626 → 暗色 #ef4444
+     */
+    --deadline-urgent: #ef4444;
+
+    /*
+     * 主色渐变终点（暗色）：在暗背景上使用更亮的青色
+     * 浅色 #22c7ff → 暗色 #38bdf8
+     */
+    --primary-gradient-end: #38bdf8;
+
+    /*
+     * 卡片阴影（暗色）：暗色模式下阴影使用更深的黑色
+     */
+    --card-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
 }
 
 @layer base {
