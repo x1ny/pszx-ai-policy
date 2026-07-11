@@ -1,5 +1,7 @@
-import { Link, Outlet, createRootRoute } from "@tanstack/react-router"
+import { Outlet, createRootRoute } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
+import { DashboardHeader } from "@/components/layout/dashboard-header"
+import { DashboardSidebar } from "@/components/layout/dashboard-sidebar"
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -7,22 +9,14 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-4">
-          <Link to="/" className="text-sm font-medium">
-            Pszx AI Policy
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link to="/" className="transition-colors hover:text-foreground">
-              Home
-            </Link>
-          </nav>
-        </div>
-      </header>
-      <main className="mx-auto flex w-full max-w-5xl flex-1 px-4 py-6">
-        <Outlet />
-      </main>
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
+      <DashboardHeader />
+      <div className="flex flex-1 overflow-hidden">
+        <main className="flex-1 overflow-y-auto p-4">
+          <Outlet />
+        </main>
+        <DashboardSidebar />
+      </div>
       <TanStackRouterDevtools />
     </div>
   )
