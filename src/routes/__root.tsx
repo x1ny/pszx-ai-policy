@@ -9,7 +9,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
+    <div className="flex h-screen flex-col overflow-hidden bg-muted/40">
       <DashboardHeader />
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-y-auto p-4">

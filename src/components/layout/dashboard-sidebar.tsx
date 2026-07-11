@@ -10,9 +10,9 @@ export function DashboardSidebar() {
   const [input, setInput] = useState("")
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col gap-3 border-l border-primary/10 bg-gradient-to-b from-blue-50/80 to-blue-100/40 p-3.5">
-      {/* 今日快讯 */}
-      <section className="rounded-xl border border-blue-200 bg-card p-3 shadow-sm">
+    <aside className="flex w-80 shrink-0 flex-col gap-3 border-l border-border bg-gradient-to-b from-blue-50/80 to-blue-100/40 p-3.5">
+      {/* 今日快讯 — 原型首页最终统一轮，装饰性标签使用 Tailwind 内置色 */}
+      <section className="rounded-xl border border-border bg-card p-3 shadow-sm">
         <div className="mb-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-extrabold text-foreground">
             <span className="block h-4 w-1 rounded-full bg-amber-500" />
@@ -47,11 +47,11 @@ export function DashboardSidebar() {
         </button>
       </section>
 
-      {/* AI 聊天面板 */}
-      <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-blue-200 bg-card shadow-sm">
-        <div className="border-b border-border bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 text-sm font-bold text-blue-800">
+      {/* AI 聊天面板 — 原型首页最终统一轮 */}
+      <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 text-sm font-bold">
           <div className="flex items-center justify-between">
-            <span>园区智能工作台</span>
+            <span className="text-primary">园区智能工作台</span>
             <span className="cursor-pointer text-xs font-normal text-muted-foreground hover:text-foreground">
               清空
             </span>
@@ -65,7 +65,7 @@ export function DashboardSidebar() {
               {suggestions.map((s) => (
                 <button
                   key={s}
-                  className="w-full rounded-xl border border-transparent bg-muted px-3 py-2 text-left text-xs text-primary transition-colors hover:border-primary hover:bg-primary/5"
+                  className="w-full rounded-xl border border-transparent bg-muted px-3 py-2 text-left text-xs text-primary transition-colors hover:border-primary hover:bg-accent"
                 >
                   {s}
                 </button>
