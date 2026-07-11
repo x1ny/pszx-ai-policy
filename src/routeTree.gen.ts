@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PolicyRouteImport } from './routes/policy'
 import { Route as EnterpriseRouteImport } from './routes/enterprise'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PolicyRoute = PolicyRouteImport.update({
+  id: '/policy',
+  path: '/policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EnterpriseRoute = EnterpriseRouteImport.update({
   id: '/enterprise',
   path: '/enterprise',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/enterprise': typeof EnterpriseRoute
+  '/policy': typeof PolicyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/enterprise': typeof EnterpriseRoute
+  '/policy': typeof PolicyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/enterprise': typeof EnterpriseRoute
+  '/policy': typeof PolicyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/enterprise'
+  fullPaths: '/' | '/enterprise' | '/policy'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/enterprise'
-  id: '__root__' | '/' | '/enterprise'
+  to: '/' | '/enterprise' | '/policy'
+  id: '__root__' | '/' | '/enterprise' | '/policy'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EnterpriseRoute: typeof EnterpriseRoute
+  PolicyRoute: typeof PolicyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/policy': {
+      id: '/policy'
+      path: '/policy'
+      fullPath: '/policy'
+      preLoaderRoute: typeof PolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/enterprise': {
       id: '/enterprise'
       path: '/enterprise'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EnterpriseRoute: EnterpriseRoute,
+  PolicyRoute: PolicyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
