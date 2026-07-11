@@ -1,0 +1,2610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>园区政策服务平台 - 政策找企业</title>
+    <style>
+        /* ==================== 全局基础样式 ==================== */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background-color: #f4f6f9; color: #333; font-size: 14px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
+        ul { list-style: none; }
+        a { text-decoration: none; color: inherit; }
+        
+        /* ==================== 布局主框架 ==================== */
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+        .header { height: 60px; background-color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-bottom: 1px solid #ebeef5; flex-shrink: 0; }
+        .platform-name { font-size: 18px; font-weight: bold; color: #1f2d3d; letter-spacing: 0.5px; }
+        .content-area { flex: 1; display: flex; padding: 16px; gap: 16px; overflow: hidden; }
+        .main-content { flex: 1; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding-right: 4px; }
+        .ai-sidebar { width: 320px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; min-height: 0; }
+        .ai-chat-panel { flex: 1 1 auto; min-height: 0; background-color: #fff; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.03); overflow: hidden; }
+        .ai-flash-card { flex: 0 0 auto; padding: 10px 12px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.03); }
+        .ai-flash-card .section-title { margin-bottom: 8px !important; font-size: 14px; }
+        .ai-flash-card .flash-content { padding: 8px; margin-bottom: 8px; gap: 6px; }
+        .ai-flash-card .flash-list-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px; font-size: 12px; line-height: 1.35; }
+        .ai-flash-card .flash-tag { font-size: 11px; padding: 1px 6px; }
+        .ai-flash-card .flash-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ai-flash-card .btn-ai { padding: 7px; font-size: 12px; }
+
+
+        /* ==================== 按角色分组布局：管理者看板 + 服务人员工作台 ==================== */
+        .role-section { border-radius: 10px; padding: 16px; border: 1px solid #e5eaf2; box-shadow: 0 2px 12px rgba(0,0,0,0.025); }
+        .manager-section { background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%); }
+        .service-section { background: #fff; }
+        .role-section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding: 0 2px; }
+        .role-title-main { font-size: 16px; font-weight: 800; color: #1f2d3d; display: flex; align-items: center; gap: 8px; }
+        .role-title-sub { font-size: 12px; color: #909399; font-weight: normal; }
+        .manager-layout { display: block; }
+        .manager-kpi-grid { height: auto; }
+        .manager-kpi-grid .kpi-card { min-height: 116px; justify-content: space-between; }
+        .manager-kpi-grid .kpi-value-container { margin-top: 12px; }
+        .manager-layout .match-distribution-card { min-height: 222px; }
+        .kpi-value.clickable-number { cursor: pointer; width: max-content; padding: 2px 8px; margin-left: -8px; border-radius: 8px; }
+        .kpi-value.clickable-number:hover { background: #f0f7ff; color: #1890ff; }
+        .service-card-stack { display: flex; flex-direction: column; gap: 16px; }
+        .service-policy-card, .enterprise-policy-card { width: 100%; min-height: 228px; }
+
+        /* ==================== 动态交互微特效 ==================== */
+        .card, .policy-item, .suggestion-pill, tr, .btn-action { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .clickable { cursor: pointer; }
+        .card.clickable:hover, .policy-item:hover { transform: translateY(-4px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); border-color: #1890ff; }
+        
+        /* 通用悬浮提示 Tooltip 样式 */
+        .info-icon { position: relative; cursor: pointer; color: #909399; font-style: normal; margin-left: 4px; font-weight: normal; }
+        .info-icon .tooltip-text {
+            visibility: hidden; width: 260px; background-color: #303133; color: #fff; text-align: left;
+            border-radius: 6px; padding: 8px 12px; position: absolute; z-index: 100; bottom: 150%; left: 50%; transform: translateX(-50%);
+            opacity: 0; transition: opacity 0.3s; font-size: 12px; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            white-space: normal; word-break: break-all; font-weight: normal;
+        }
+        .info-icon .tooltip-text::after {
+            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #303133 transparent transparent transparent;
+        }
+        .info-icon:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+        /* 通用卡片样式 */
+        .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.02); border: 1px solid transparent; }
+        .section-title { font-size: 16px; font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .more-link { font-size: 13px; color: #1890ff; cursor: pointer; font-weight: normal;}
+        .more-link:hover { text-decoration: underline; color: #40a9ff; }
+
+        .title-with-tooltip { display: inline-flex; align-items: center; gap: 6px; }
+        .title-info-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #f0f2f5; color: #909399; font-size: 12px; line-height: 16px;
+        }
+        .title-info-icon .tooltip-text {
+            width: 330px; bottom: auto; top: 24px; left: 50%; transform: translateX(-8%);
+            word-break: keep-all; box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+        }
+        .title-info-icon .tooltip-text::after {
+            top: auto; bottom: 100%; left: 22px; margin-left: 0;
+            border-color: transparent transparent #303133 transparent;
+        }
+
+        /* ==================== 顶部KPI 3列重构 ==================== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .kpi-card { display: flex; flex-direction: column; position: relative; overflow: visible; justify-content: space-between; min-height: 110px;}
+        .kpi-header { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #606266; font-weight: bold;}
+        .kpi-icon-wrapper { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        
+        .kpi-value-container { margin-top: 12px; }
+        .kpi-value { font-size: 32px; font-weight: bold; display: flex; align-items: baseline; gap: 4px; color: #111;}
+        .kpi-value small { font-size: 14px; color: #606266; font-weight: normal;}
+        .kpi-trend-label { font-size: 12px; color: #909399; margin-top: 4px;}
+        .trend-up-num { color: #52c41a; font-weight: bold; margin-left: 4px;}
+
+        /* 双指标样式 */
+        .dual-kpi-container { display: flex; gap: 12px; margin-bottom: 8px; margin-top: 8px;}
+        .dual-kpi-item { display: flex; flex-direction: column; gap: 4px; flex: 1; padding: 4px; border-radius: 4px; }
+        .dual-kpi-item:hover { background: #f5f7fa; }
+        .dual-kpi-label { font-size: 12px; color: #909399; display: flex; align-items: center;}
+        .dual-kpi-value-row { display: flex; align-items: baseline; gap: 4px; }
+        .dual-kpi-val { font-size: 24px; font-weight: bold; color: #333;}
+        .dual-kpi-unit { font-size: 12px; color: #606266; font-weight: normal; }
+        .dual-kpi-trend { font-size: 12px; color: #52c41a; margin-top:2px;}
+
+        /* ==================== 中间分栏：今日快讯 + 重点政策 ==================== */
+        .middle-layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+        
+        .flash-card { display: flex; flex-direction: column; }
+        .flash-content { 
+            flex: 1; background: #fafafa; padding: 14px 12px; border-radius: 6px; 
+            border: 1px solid #ebeef5; margin-bottom: 16px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .flash-list-item { display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.5;}
+        .flash-tag { font-size: 12px; padding: 2px 8px; border-radius: 4px; width: max-content; font-weight: bold; }
+        .tag-red { background: #fff1f0; color: #f5222d; border: 1px solid #ffa39e; }
+        .tag-green { background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; }
+        .tag-blue { background: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+        .flash-text { color: #303133; font-weight: 500; }
+
+        .btn-ai { background: #1890ff; color: #fff; border: none; border-radius: 6px; padding: 10px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; transition: background 0.3s; width: 100%;}
+        .btn-ai:hover { background: #40a9ff; }
+
+
+        /* ==================== 今日快讯弹窗 ==================== */
+        .flash-modal-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: none; align-items: center; justify-content: center; z-index: 999; padding: 24px; }
+        .flash-modal-mask.show { display: flex; }
+        .flash-modal { width: 620px; max-width: 92vw; background: #fff; border-radius: 12px; box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22); overflow: hidden; animation: modalFadeIn 0.22s ease both; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .flash-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #eef2f7; }
+        .flash-modal-title { font-size: 17px; font-weight: 800; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .flash-modal-close { border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 22px; line-height: 1; }
+        .flash-modal-close:hover { color: #4b5563; }
+        .flash-modal-body { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 12px; }
+        .flash-detail-item { border: 1px solid #edf2f7; background: #f8fafc; border-radius: 10px; padding: 13px 14px; }
+        .flash-detail-title { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+        .flash-detail-title .flash-tag { flex-shrink: 0; }
+        .flash-detail-title strong { color: #111827; font-size: 14px; }
+        .flash-detail-text { color: #4b5563; font-size: 13px; line-height: 1.7; }
+        .flash-modal-footer { padding: 0 22px 20px; display: flex; justify-content: flex-end; }
+        .flash-modal-btn { border: none; border-radius: 8px; padding: 9px 16px; font-weight: 800; font-size: 13px; cursor: pointer; background: #1890ff; color: #fff; box-shadow: 0 6px 14px rgba(24, 144, 255, 0.18); }
+        .flash-modal-btn:hover { background: #1677d2; }
+
+
+
+        /* ==================== 累计匹配分析弹窗 ==================== */
+        .match-modal-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 24px; }
+        .match-modal-mask.show { display: flex; }
+        .match-modal { width: 660px; max-width: 92vw; background: #fff; border-radius: 12px; box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22); overflow: hidden; animation: modalFadeIn 0.22s ease both; }
+        .match-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #eef2f7; }
+        .match-modal-title { font-size: 17px; font-weight: 800; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .match-modal-close { border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 22px; line-height: 1; }
+        .match-modal-close:hover { color: #4b5563; }
+        .match-modal-body { padding: 20px 24px 24px; }
+        .match-modal-note { margin-top: 14px; padding: 10px 12px; border-radius: 8px; background: #f8fafc; color: #606266; font-size: 12px; line-height: 1.6; }
+
+        /* 重点政策卡片 */
+        .policy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .policy-item { border: 1px solid #ebeef5; border-radius: 8px; padding: 16px; position: relative; background: #fff; cursor: pointer; }
+        .policy-item .policy-header:hover h4 { color: #1890ff; }
+        .policy-header { display: flex; gap: 12px; margin-bottom: 12px; }
+        .policy-icon { width: 48px; height: 48px; border-radius: 8px; flex-shrink: 0;}
+        .policy-info h4 { font-size: 15px; margin-bottom: 6px; line-height: 1.3;}
+        .tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;}
+        .tag { font-size: 12px; padding: 2px 6px; border-radius: 4px; background: #f0f9eb; color: #67c23a; white-space: nowrap;}
+        .tag.blue { background: #e6f7ff; color: #1890ff; }
+        .policy-date { font-size: 12px; color: #f5222d; font-weight: bold;}
+        .policy-date.normal { color: #faad14; }
+        .policy-date.safe { color: #909399; font-weight: normal; }
+        
+        .policy-stats { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+        .stat-item { 
+            display: flex; flex-direction: row; justify-content: space-between; align-items: center; 
+            background: #f5f7fa; padding: 8px 12px; border-radius: 6px; font-size: 12px; color: #606266; 
+        }
+        .stat-item:hover { background-color: #e6f7ff; color: #1890ff; cursor: pointer; }
+        .stat-val { font-size: 14px; font-weight: bold; }
+        .stat-val.green { color: #52c41a; }
+
+        /* ==================== 底部布局：漏斗图 + 企业表格 ==================== */
+        .bottom-layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; margin-top: 16px; }
+        .funnel-container { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 10px 0; }
+        .funnel-row-wrapper { display: flex; align-items: center; gap: 12px; width: 100%; }
+        
+        .funnel-layer {
+            flex: 1; height: 42px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .funnel-layer:hover { transform: scale(1.02); z-index: 10;}
+        
+        .layer-1 { background-color: #4b7bec; clip-path: polygon(0% 0%, 100% 0%, 90% 100%, 10% 100%); }
+        .layer-2 { background-color: #2bcbba; clip-path: polygon(10% 0%, 90% 0%, 80% 100%, 20% 100%); }
+        .layer-3 { background-color: #fed330; clip-path: polygon(20% 0%, 80% 0%, 74% 100%, 26% 100%); }
+        .layer-4 { background-color: #a55eea; clip-path: polygon(26% 0%, 74% 0%, 74% 100%, 26% 100%); }
+        
+        .funnel-text { font-size: 13px; color: #fff; font-weight: bold; display: flex; gap: 8px; align-items: center; text-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+        .funnel-num { font-size: 15px; font-weight: 900; }
+        
+        .funnel-compare { width: 75px; font-size: 12px; text-align: left; font-weight: bold; white-space: nowrap; flex-shrink: 0;}
+        .comp-up { color: #52c41a; }
+        .comp-down { color: #f5222d; }
+        .comp-none { color: #909399; }
+
+        /* ==================== 政策匹配结果分布：环形图 ==================== */
+        .match-distribution-card { min-height: 222px; }
+        .match-chart-layout { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 2px 0 4px; }
+        .donut-chart {
+            width: 168px; height: 168px; border-radius: 50%; position: relative; flex-shrink: 0;
+            background: conic-gradient(#1890ff 0deg 120deg, #36cfc9 120deg 296deg, #faad14 296deg 360deg);
+            box-shadow: 0 10px 22px rgba(24,144,255,0.12);
+        }
+        .donut-chart::before { content: ""; position: absolute; inset: 34px; background: #fff; border-radius: 50%; box-shadow: inset 0 0 0 1px #f0f2f5; }
+        .donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; }
+        .donut-total-label { font-size: 12px; color: #909399; margin-bottom: 2px; }
+        .donut-total-value { font-size: 28px; font-weight: 800; color: #1f2d3d; line-height: 1; }
+        .donut-total-unit { font-size: 12px; color: #606266; margin-top: 3px; }
+        .match-legend { flex: 1; display: flex; flex-direction: column; gap: 18px; padding-left: 8px; }
+        .legend-item { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; column-gap: 10px; font-size: 14px; color: #303133; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .legend-name { font-weight: 600; white-space: nowrap; min-width: 46px; }
+        .legend-count { font-size: 22px; font-weight: 800; }
+        .legend-count.blue { color: #1890ff; }
+        .legend-count.green { color: #36cfc9; }
+        .legend-count.orange { color: #faad14; }
+        .legend-unit { color: #606266; font-size: 12px; margin-left: 2px; font-weight: normal; white-space: nowrap; }
+        .legend-item > span:last-child { white-space: nowrap; justify-self: end; }
+
+        /* ==================== 企业表格 (6列：名称 + 三类政策数 + 状态 + 操作) ==================== */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;}
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #ebeef5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        th:nth-child(1), td:nth-child(1) { width: 24%; }
+        th:nth-child(2), td:nth-child(2) { width: 13%; text-align: center; }
+        th:nth-child(3), td:nth-child(3),
+        th:nth-child(4), td:nth-child(4),
+        th:nth-child(5), td:nth-child(5) { width: 11%; text-align: center; }
+        th:nth-child(6), td:nth-child(6) { width: 13%; text-align: center; }
+        th:nth-child(7), td:nth-child(7) { width: 12%; text-align: center; overflow: visible; text-overflow: clip; }
+        
+        th { color: #909399; font-weight: normal; }
+        tbody tr:hover { background-color: #f0f7ff; }
+
+        .policy-count { font-weight: bold; font-size: 14px; }
+        .policy-count.high { color: #52c41a; }
+        .policy-count.mid { color: #faad14; }
+        .policy-count.low { color: #606266; }
+
+        .status-badge { background: #e6f7ff; color: #1890ff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .status-badge.neutral { background: #f5f5f5; color: #909399; }
+        .node-tag { display: inline-block; background: #f0f7ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; }
+
+        .btn-table-action { background: #fff; color: #1890ff; border: 1px solid #1890ff; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500; white-space: nowrap; display: inline-block; vertical-align: middle; }
+        .btn-table-action:hover { background: #1890ff; color: #fff; }
+
+
+
+        /* ==================== 企业找政策聚合分析 + 政策列表 ==================== */
+        .service-top-layout { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 16px; align-items: stretch; }
+        .policy-enterprise-column { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+        .service-overview-card { min-height: 318px; height: 100%; }
+        .policy-list-card, .enterprise-policy-card { min-height: 0; }
+        .filter-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+        .filter-label { font-size: 12px; color: #909399; }
+        .segmented-control { display: inline-flex; padding: 3px; background: #f3f6fb; border-radius: 8px; border: 1px solid #e5eaf2; }
+        .segment-btn { border: none; background: transparent; color: #606266; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+        .segment-btn.active { background: #1890ff; color: #fff; box-shadow: 0 4px 10px rgba(24,144,255,0.18); }
+        .aggregation-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .summary-chip { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; padding: 8px; }
+        .summary-chip-label { font-size: 12px; color: #909399; margin-bottom: 3px; }
+        .summary-chip-value { font-size: 18px; font-weight: 800; color: #1f2d3d; }
+        .overview-table-wrap, .policy-table-wrap { border: 1px solid #edf2f7; border-radius: 8px; overflow: hidden; }
+        .overview-table, .policy-list-table, .enterprise-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+        .overview-table { height: 100%; }
+        .overview-table th, .overview-table td,
+        .policy-list-table th, .policy-list-table td,
+        .enterprise-table th, .enterprise-table td { padding: 10px 10px; border-bottom: 1px solid #edf2f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .overview-table th, .policy-list-table th, .enterprise-table th { background: #f8fafc; color: #7b8794; font-weight: 700; }
+        .overview-table tr:last-child td, .policy-list-table tr:last-child td, .enterprise-table tr:last-child td { border-bottom: none; }
+        .overview-table th, .overview-table td { text-align: center; }
+        .overview-table th:nth-child(1), .overview-table td:nth-child(1) { width: 24%; }
+        .overview-table th:nth-child(2), .overview-table td:nth-child(2) { width: 38%; }
+        .overview-table th:nth-child(3), .overview-table td:nth-child(3) { width: 38%; }
+        .overview-table .group-cell { font-weight: 800; color: #1f2d3d; background: #fbfdff; text-align: center; }
+        .overview-table .count-cell { color: #1890ff; font-weight: 900; font-size: 15px; cursor: pointer; text-align: center; }
+        .overview-table .count-cell:hover { text-decoration: underline; }
+        .policy-list-table th:nth-child(1), .policy-list-table td:nth-child(1) { width: 43%; }
+        .policy-list-table th:nth-child(2), .policy-list-table td:nth-child(2) { width: 17%; text-align: center; }
+        .policy-list-table th:nth-child(3), .policy-list-table td:nth-child(3) { width: 16%; text-align: center; }
+        .policy-list-table th:nth-child(4), .policy-list-table td:nth-child(4) { width: 13%; text-align: center; }
+        .policy-list-table th:nth-child(5), .policy-list-table td:nth-child(5) { width: 11%; text-align: center; overflow: visible; }
+        .enterprise-table th:nth-child(1), .enterprise-table td:nth-child(1) { width: 40%; }
+        .enterprise-table th:nth-child(2), .enterprise-table td:nth-child(2) { width: 17%; text-align: center; }
+        .enterprise-table th:nth-child(3), .enterprise-table td:nth-child(3) { width: 15%; text-align: center; }
+        .enterprise-table th:nth-child(4), .enterprise-table td:nth-child(4) { width: 15%; text-align: center; }
+        .enterprise-table th:nth-child(5), .enterprise-table td:nth-child(5) { width: 13%; text-align: center; overflow: visible; }
+
+        .policy-name-cell { font-weight: 800; color: #1890ff; cursor: pointer; }
+        .policy-name-cell:hover { text-decoration: underline; }
+        .policy-level { display: inline-block; border-radius: 999px; padding: 3px 8px; background: #f0f7ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 12px; font-weight: 700; }
+        .policy-type-badge { display: inline-block; border-radius: 999px; padding: 3px 8px; background: #f6ffed; color: #52c41a; border: 1px solid #b7eb8f; font-size: 12px; font-weight: 700; }
+        .metric-link { color: #1890ff; font-weight: 900; cursor: pointer; }
+        .metric-link:hover { text-decoration: underline; }
+        .deadline-red { color: #f5222d; font-weight: 800; }
+        .deadline-orange { color: #fa8c16; font-weight: 800; }
+        .deadline-gray { color: #909399; }
+        .service-card-stack { display: flex; flex-direction: column; gap: 16px; }
+        @media (max-width: 1280px) {
+            .service-top-layout { grid-template-columns: 1fr; }
+        }
+
+        /* AI 助手右侧栏 */
+        .ai-header { padding: 16px; border-bottom: 1px solid #ebeef5; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .ai-content { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #fafafa; scroll-behavior: smooth;}
+        .chat-bubble { max-width: 90%; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 8px; animation: msgFadeIn 0.3s ease both; }
+        @keyframes msgFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-ai { align-self: flex-start; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #ebeef5;}
+        .chat-user { align-self: flex-end; background: #1890ff; color: #fff; border-radius: 8px 8px 0 8px; }
+        .ai-suggestions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .suggestion-pill { background: #f0f2f5; color: #1890ff; padding: 8px 12px; border-radius: 16px; font-size: 12px; cursor: pointer; width: 100%; border: 1px solid transparent; line-height: 1.4; text-align: left;}
+        .suggestion-pill:hover { background: #e6f7ff; border-color: #1890ff; }
+        .typing-cursor { display:inline-block; margin-left:2px; color:#1890ff; animation: cursorBlink 0.9s infinite; }
+        @keyframes cursorBlink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0; } }
+        .ai-input-area { padding: 16px; border-top: 1px solid #ebeef5; background: #fff; }
+        .input-box-wrapper { position: relative; display: flex; align-items: center; }
+        .input-box { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px 35px 10px 10px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+        .input-box:focus { border-color: #1890ff; }
+        .send-btn { position: absolute; right: 10px; color: #c0c4cc; cursor: pointer; font-size: 16px; transition: color 0.2s; }
+        .send-btn.active { color: #1890ff; }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    
+
+        /* ==================== 页面美化增强版 ==================== */
+        :root {
+            --primary: #1677ff;
+            --primary-2: #22c7ff;
+            --primary-soft: #eef6ff;
+            --green: #15b881;
+            --purple: #7c3aed;
+            --orange: #f59e0b;
+            --text-main: #172033;
+            --text-sub: #6b7280;
+            --line: #e7edf6;
+            --card-shadow: 0 12px 30px rgba(31, 89, 171, 0.08);
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 8% 10%, rgba(24,144,255,0.13) 0, rgba(24,144,255,0) 260px),
+                radial-gradient(circle at 82% 5%, rgba(124,58,237,0.10) 0, rgba(124,58,237,0) 280px),
+                linear-gradient(135deg, #f7fbff 0%, #eef4fb 45%, #f8fafc 100%);
+            color: var(--text-main);
+        }
+
+        .header {
+            height: 56px;
+            margin: 12px 16px 0;
+            padding: 0 20px;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.55);
+            background: linear-gradient(135deg, #0f5ed7 0%, #1687ff 58%, #20c8ff 100%);
+            box-shadow: 0 14px 34px rgba(22, 119, 255, 0.22);
+            color: #fff;
+        }
+        .platform-name { color: #fff; font-size: 18px; letter-spacing: 0.8px; }
+        .header-right { display: flex; align-items: center; gap: 18px; color: rgba(255,255,255,0.92); }
+        .header-right .user-profile {
+            padding: 5px 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.22);
+            backdrop-filter: blur(8px);
+        }
+        .header-right .user-profile div { color: inherit !important; }
+        .header-right .avatar { box-shadow: 0 0 0 2px rgba(255,255,255,0.72); }
+
+        .content-area { padding: 12px 16px 16px; gap: 14px; }
+        .main-content { gap: 14px; padding-right: 0; overflow: hidden; }
+        .role-section {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            padding: 14px;
+            border: 1px solid rgba(226, 234, 246, 0.86);
+            box-shadow: var(--card-shadow);
+        }
+        .role-section::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--primary-2), #7c3aed);
+            opacity: 0.9;
+        }
+        .manager-section {
+            background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,251,255,0.96) 100%);
+        }
+        .service-section {
+            flex: 1;
+            min-height: 0;
+            background: rgba(255,255,255,0.84);
+            backdrop-filter: blur(10px);
+        }
+        .role-section-title { margin-bottom: 12px; }
+        .role-title-main { font-size: 17px; letter-spacing: 0.2px; }
+        .role-title-sub { color: #7b8794; }
+
+        .card {
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(226, 234, 246, 0.88);
+            box-shadow: 0 8px 22px rgba(31, 89, 171, 0.055);
+            background: rgba(255,255,255,0.96);
+        }
+        .card:hover { box-shadow: 0 12px 28px rgba(31, 89, 171, 0.10); }
+        .section-title { margin-bottom: 12px; color: var(--text-main); }
+
+        .kpi-grid { gap: 14px; }
+        .manager-kpi-grid .kpi-card {
+            min-height: 104px;
+            overflow: hidden;
+            border: 1px solid rgba(222, 233, 248, 0.95);
+            background: linear-gradient(145deg, #ffffff 0%, #f7fbff 100%);
+        }
+        .manager-kpi-grid .kpi-card::after {
+            content: "";
+            position: absolute;
+            right: -28px;
+            bottom: -34px;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(24,144,255,0.14), rgba(24,144,255,0));
+        }
+        .manager-kpi-grid .kpi-card:nth-child(2)::after { background: radial-gradient(circle, rgba(21,184,129,0.16), rgba(21,184,129,0)); }
+        .manager-kpi-grid .kpi-card:nth-child(3)::after { background: radial-gradient(circle, rgba(124,58,237,0.15), rgba(124,58,237,0)); }
+        .kpi-header { color: #5e6b7e; }
+        .kpi-icon-wrapper { width: 34px; height: 34px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.75); }
+        .kpi-value { color: #111827; font-size: 34px; }
+        .kpi-value small { color: #687386; }
+        .kpi-value.clickable-number {
+            position: relative;
+            color: #1677ff;
+            background: linear-gradient(90deg, rgba(24,144,255,0.08), rgba(124,58,237,0.05));
+        }
+        .kpi-value.clickable-number::after {
+            content: "查看分布";
+            margin-left: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #1677ff;
+            background: #e8f3ff;
+            border: 1px solid #cfe6ff;
+            padding: 2px 7px;
+            border-radius: 999px;
+        }
+
+        .service-top-layout { grid-template-columns: 390px minmax(0, 1fr); gap: 14px; min-height: 0; }
+        .service-card-stack, .policy-enterprise-column { gap: 14px; }
+        .service-overview-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+        }
+        .service-overview-card .section-title { align-items: center; }
+        .service-overview-card .section-title > div:first-child,
+        .policy-list-card .section-title > div:first-child,
+        .enterprise-policy-card .section-title > div:first-child,
+        .ai-flash-card .section-title > div:first-child {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .service-overview-card .section-title > div:first-child::before {
+            content: "";
+            width: 8px;
+            height: 18px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #1677ff, #22c7ff);
+        }
+        .policy-list-card .section-title > div:first-child::before {
+            content: "";
+            width: 8px;
+            height: 18px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #15b881, #6ee7b7);
+        }
+        .enterprise-policy-card .section-title > div:first-child::before {
+            content: "";
+            width: 8px;
+            height: 18px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #7c3aed, #c084fc);
+        }
+
+        .segmented-control {
+            padding: 4px;
+            border-radius: 12px;
+            background: #eef4fb;
+            border-color: #dce8f6;
+            box-shadow: inset 0 1px 2px rgba(31, 89, 171, 0.06);
+        }
+        .segment-btn { padding: 7px 12px; border-radius: 9px; font-size: 13px; }
+        .segment-btn.active {
+            background: linear-gradient(135deg, #1677ff, #22a7ff);
+            box-shadow: 0 8px 16px rgba(22,119,255,0.22);
+        }
+
+        .overview-table-wrap, .policy-table-wrap {
+            border-color: #e3edf8;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+        .overview-table th, .policy-list-table th, .enterprise-table th {
+            background: linear-gradient(180deg, #f7fbff 0%, #f1f6fc 100%);
+            color: #65758b;
+            font-size: 13px;
+        }
+        .overview-table td, .policy-list-table td, .enterprise-table td {
+            color: #263244;
+        }
+        .overview-table tbody tr:nth-child(even),
+        .policy-list-table tbody tr:nth-child(even),
+        .enterprise-table tbody tr:nth-child(even) { background: #fcfdff; }
+        .overview-table .group-cell {
+            background: linear-gradient(180deg, #f7fbff 0%, #f2f7fd 100%);
+            color: #172033;
+        }
+        .overview-table .count-cell,
+        .metric-link {
+            color: #1677ff;
+            font-size: 16px;
+            letter-spacing: 0.2px;
+        }
+
+
+        /* ==================== 匹配结果分析：热力图 ==================== */
+        .match-heatmap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            padding: 12px 12px 10px;
+            border: 1px solid #e3edf8;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+        }
+        .heatmap-note {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 6px;
+            color: #65758b;
+            font-size: 12px;
+        }
+        .heatmap-axis-layout {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 28px minmax(0, 1fr);
+            grid-template-rows: 24px minmax(0, 1fr) 22px;
+            column-gap: 8px;
+            row-gap: 6px;
+        }
+        .heatmap-axis-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #53657d;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+        }
+        .heatmap-axis-x {
+            grid-column: 2;
+            grid-row: 1;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(22,119,255,0.08), rgba(22,119,255,0.16), rgba(22,119,255,0.08));
+            border: 1px solid #dcebf9;
+        }
+        .heatmap-axis-y {
+            grid-column: 1;
+            grid-row: 2;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(22,119,255,0.08), rgba(22,119,255,0.16), rgba(22,119,255,0.08));
+            border: 1px solid #dcebf9;
+        }
+        .heatmap-grid-wrap {
+            grid-column: 2;
+            grid-row: 2;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: 86px repeat(3, minmax(72px, 1fr));
+            grid-template-rows: 34px repeat(3, 1fr);
+            gap: 8px;
+            min-height: 214px;
+            height: 100%;
+        }
+        .heatmap-corner,
+        .heatmap-col-label,
+        .heatmap-row-label,
+        .heatmap-cell {
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .heatmap-corner {
+            color: #93a4b8;
+            font-size: 12px;
+            background: #f4f8fd;
+            border: 1px solid #e8f0fa;
+        }
+        .heatmap-col-label,
+        .heatmap-row-label {
+            font-weight: 800;
+            color: #36465c;
+            background: linear-gradient(180deg, #f7fbff 0%, #eef6ff 100%);
+            border: 1px solid #dcebf9;
+            font-size: 12px;
+            padding: 0 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .heatmap-cell {
+            position: relative;
+            min-height: 54px;
+            flex-direction: column;
+            gap: 3px;
+            color: #0f2748;
+            font-weight: 900;
+            font-size: 20px;
+            border: 1px solid rgba(22,119,255,0.12);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.66), 0 6px 14px rgba(22,119,255,0.06);
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+        }
+        .heatmap-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 10px 20px rgba(22,119,255,0.14);
+            filter: saturate(1.08);
+        }
+        .heatmap-cell small {
+            color: rgba(15,39,72,0.62);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .heat-0 { background: #f3f8ff; }
+        .heat-1 { background: linear-gradient(135deg, #edf7ff, #dff0ff); }
+        .heat-2 { background: linear-gradient(135deg, #dff0ff, #c8e4ff); }
+        .heat-3 { background: linear-gradient(135deg, #c8e4ff, #a9d4ff); }
+        .heat-4 { background: linear-gradient(135deg, #a9d4ff, #78baff); color: #0b376b; }
+        .heat-5 { background: linear-gradient(135deg, #78baff, #439aff); color: #ffffff; }
+        .heat-5 small { color: rgba(255,255,255,0.76); }
+        .heat-6 { background: linear-gradient(135deg, #439aff, #1677ff); color: #ffffff; }
+        .heat-6 small { color: rgba(255,255,255,0.78); }
+        .heatmap-legend {
+            grid-column: 2;
+            grid-row: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #65758b;
+            font-size: 12px;
+            padding-top: 0;
+        }
+        .heatmap-scale {
+            width: 120px;
+            height: 10px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #edf7ff 0%, #a9d4ff 45%, #1677ff 100%);
+            border: 1px solid #dcebf9;
+        }
+        .policy-name-cell { color: #0f6edb; }
+        .policy-level, .node-tag, .status-badge, .policy-type-badge {
+            border-radius: 999px;
+            padding: 4px 9px;
+            border-width: 1px;
+        }
+        .policy-type-badge { background: #ecfdf5; color: #10a66f; border-color: #bbf7d0; }
+        .node-tag { background: #eef6ff; color: #1677ff; border-color: #cfe6ff; }
+        .status-badge { background: #eaf5ff; color: #1677ff; border: 1px solid #cfe6ff; }
+        .status-badge.neutral { background: #f5f7fa; color: #8a94a6; border-color: #e5e7eb; }
+        .btn-table-action {
+            border-radius: 999px;
+            padding: 5px 12px;
+            border-color: #b8dcff;
+            background: #f7fbff;
+            box-shadow: 0 2px 6px rgba(22,119,255,0.08);
+        }
+        .btn-table-action:hover {
+            background: linear-gradient(135deg, #1677ff, #22a7ff);
+            border-color: #1677ff;
+            box-shadow: 0 6px 14px rgba(22,119,255,0.18);
+        }
+        .more-link {
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #f0f7ff;
+            color: #1677ff;
+            font-weight: 700;
+        }
+        .more-link:hover { background: #e1f0ff; text-decoration: none; }
+
+        .ai-sidebar { width: 332px; }
+        .ai-flash-card {
+            border-radius: 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        }
+        .ai-flash-card .section-title > div:first-child::before {
+            content: "";
+            width: 8px;
+            height: 18px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #f59e0b, #fcd34d);
+        }
+        .ai-flash-card .flash-content {
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+            border-color: #e3edf8;
+            border-radius: 14px;
+        }
+        .flash-tag { border-radius: 999px; }
+        .btn-ai {
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1677ff, #22a7ff);
+            box-shadow: 0 8px 16px rgba(22,119,255,0.20);
+        }
+        .ai-chat-panel {
+            border-radius: 18px;
+            border: 1px solid rgba(226,234,246,0.92);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        .ai-header {
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 100%);
+        }
+        .ai-content { background: linear-gradient(180deg, #fbfdff 0%, #f7faff 100%); padding: 14px; }
+        .chat-bubble { border-radius: 14px; }
+        .chat-ai { border-color: #e3edf8; box-shadow: 0 6px 16px rgba(31, 89, 171, 0.06); }
+        .chat-user { background: linear-gradient(135deg, #1677ff, #22a7ff); }
+        .suggestion-pill {
+            border-radius: 12px;
+            background: #f3f8ff;
+            border-color: #e3edf8;
+            color: #0f6edb;
+        }
+        .suggestion-pill:hover { background: #e8f3ff; transform: translateX(2px); }
+        .input-box { border-radius: 12px; background: #fbfdff; border-color: #d8e6f6; }
+
+        .match-modal, .flash-modal {
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.72);
+            box-shadow: 0 24px 60px rgba(15,23,42,0.24);
+        }
+        .match-modal-header, .flash-modal-header {
+            background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 100%);
+        }
+
+
+        /* ==================== 本轮优化：一屏显示、列宽对齐、点击清单 ==================== */
+        .header { height: 52px; padding: 0 20px; }
+        .content-area { padding: 10px 12px; gap: 12px; }
+        .main-content { gap: 10px; padding-right: 0; overflow: hidden; }
+        .ai-sidebar { width: 312px; gap: 8px; }
+        .role-section { padding: 12px; border-radius: 16px; }
+        .role-section-title { margin-bottom: 8px; }
+        .role-title-main { font-size: 16px; }
+        .card { padding: 12px 14px; border-radius: 14px; }
+        .section-title { margin-bottom: 8px; font-size: 15px; }
+        .kpi-grid { gap: 10px; }
+        .manager-kpi-grid .kpi-card { min-height: 86px; }
+        .kpi-header { font-size: 12px; }
+        .kpi-icon-wrapper { width: 30px; height: 30px; font-size: 15px; }
+        .kpi-value { font-size: 28px; }
+        .kpi-value small { font-size: 12px; }
+        .manager-kpi-grid .kpi-value-container { margin-top: 6px; }
+        .manager-kpi-grid .kpi-card::after { width: 76px; height: 76px; right: -24px; bottom: -30px; }
+        .kpi-value.clickable-number::after { content: attr(data-tip); }
+        .service-top-layout { grid-template-columns: 370px minmax(0, 1fr); gap: 10px; }
+        .service-card-stack, .policy-enterprise-column { gap: 10px; }
+        .service-overview-card { min-height: 0; }
+        .segmented-control { padding: 3px; border-radius: 10px; }
+        .segment-btn { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+        .overview-table th, .overview-table td,
+        .policy-list-table th, .policy-list-table td,
+        .enterprise-table th, .enterprise-table td { padding: 8px 8px; font-size: 12px; }
+        .policy-list-table th:nth-child(1), .policy-list-table td:nth-child(1),
+        .enterprise-table th:nth-child(1), .enterprise-table td:nth-child(1) { width: 42%; }
+        .policy-list-table th:nth-child(2), .policy-list-table td:nth-child(2),
+        .enterprise-table th:nth-child(2), .enterprise-table td:nth-child(2) { width: 14%; text-align: center; }
+        .policy-list-table th:nth-child(3), .policy-list-table td:nth-child(3),
+        .enterprise-table th:nth-child(3), .enterprise-table td:nth-child(3) { width: 17%; text-align: center; }
+        .policy-list-table th:nth-child(4), .policy-list-table td:nth-child(4),
+        .enterprise-table th:nth-child(4), .enterprise-table td:nth-child(4) { width: 15%; text-align: center; }
+        .policy-list-table th:nth-child(5), .policy-list-table td:nth-child(5),
+        .enterprise-table th:nth-child(5), .enterprise-table td:nth-child(5) { width: 12%; text-align: center; overflow: visible; }
+        .metric-link,
+        .policy-count.high {
+            color: #1677ff;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+        }
+        .metric-link:hover, .policy-count.high:hover { text-decoration: underline; }
+        .policy-level, .node-tag, .status-badge, .policy-type-badge { padding: 3px 8px; font-size: 12px; }
+        .btn-table-action { padding: 4px 10px; font-size: 11px; }
+        .ai-flash-card { padding: 10px; }
+        .ai-flash-card .flash-content { padding: 7px; margin-bottom: 7px; gap: 5px; }
+        .ai-flash-card .btn-ai { padding: 6px; }
+        .ai-header { padding: 10px 14px; }
+        .ai-content { padding: 10px; gap: 10px; }
+        .chat-bubble { padding: 8px 11px; font-size: 12px; line-height: 1.5; }
+        .suggestion-pill { padding: 7px 10px; font-size: 12px; }
+        .ai-input-area { padding: 10px; }
+        .input-box { padding: 8px 32px 8px 10px; font-size: 12px; }
+        .list-modal-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: none; align-items: center; justify-content: center; z-index: 1001; padding: 20px; }
+        .list-modal-mask.show { display: flex; }
+        .list-modal { width: 760px; max-width: 92vw; background: #fff; border-radius: 18px; border: 1px solid rgba(255,255,255,0.72); box-shadow: 0 24px 60px rgba(15,23,42,0.24); overflow: hidden; animation: modalFadeIn 0.22s ease both; }
+        .list-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: linear-gradient(135deg, #f7fbff 0%, #eef6ff 100%); border-bottom: 1px solid #eef2f7; }
+        .list-modal-title { font-size: 17px; font-weight: 800; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .list-modal-close { border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 22px; line-height: 1; }
+        .list-modal-close:hover { color: #4b5563; }
+        .list-modal-body { padding: 16px 20px 20px; }
+        .list-modal-table-wrap { border: 1px solid #e3edf8; border-radius: 14px; overflow: hidden; }
+        .list-modal-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+        .list-modal-table th, .list-modal-table td { padding: 10px 12px; border-bottom: 1px solid #edf2f7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+        .list-modal-table th { background: linear-gradient(180deg, #f7fbff 0%, #f1f6fc 100%); color: #65758b; font-weight: 800; }
+        .list-modal-table tr:last-child td { border-bottom: none; }
+        .list-name-cell { color: #0f6edb; font-weight: 800; text-align: left !important; }
+        .list-modal-note { margin-top: 10px; color: #7b8794; font-size: 12px; line-height: 1.6; }
+
+    
+
+        /* ==================== 本轮优化：收缩热力图，避免超出卡片 ==================== */
+        .service-overview-card {
+            overflow: hidden;
+        }
+        .match-heatmap {
+            min-height: 0;
+            height: 100%;
+            padding: 8px 8px 6px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .heatmap-note {
+            margin-bottom: 4px;
+            font-size: 11px;
+            line-height: 1.2;
+        }
+        .heatmap-axis-layout {
+            height: 100%;
+            grid-template-columns: 22px minmax(0, 1fr);
+            grid-template-rows: 20px minmax(0, 1fr) 18px;
+            column-gap: 5px;
+            row-gap: 4px;
+        }
+        .heatmap-axis-title {
+            font-size: 11px;
+            letter-spacing: 0;
+        }
+        .heatmap-grid-wrap {
+            gap: 4px;
+            overflow: hidden;
+        }
+        .heatmap-grid {
+            grid-template-columns: 64px repeat(3, minmax(48px, 1fr));
+            grid-template-rows: 28px repeat(3, minmax(38px, 1fr));
+            gap: 5px;
+            min-height: 0;
+            height: 100%;
+            max-height: 190px;
+        }
+        .heatmap-corner,
+        .heatmap-col-label,
+        .heatmap-row-label,
+        .heatmap-cell {
+            border-radius: 9px;
+        }
+        .heatmap-corner,
+        .heatmap-col-label,
+        .heatmap-row-label {
+            font-size: 11px;
+            padding: 0 4px;
+        }
+        .heatmap-cell {
+            min-height: 0;
+            gap: 1px;
+            font-size: 17px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.62), 0 4px 10px rgba(22,119,255,0.05);
+        }
+        .heatmap-cell small {
+            font-size: 10px;
+        }
+        .heatmap-legend {
+            gap: 5px;
+            font-size: 10px;
+            line-height: 1;
+        }
+        .heatmap-scale {
+            width: 72px;
+            height: 8px;
+        }
+
+    
+
+        /* ==================== 本轮优化：减少热力图周围留白 ==================== */
+        .service-overview-card {
+            padding: 16px 18px 14px !important;
+        }
+        .service-overview-card .section-title {
+            margin-bottom: 10px !important;
+        }
+        .match-heatmap {
+            padding: 6px 8px 6px !important;
+            justify-content: flex-start !important;
+        }
+        .heatmap-note {
+            margin-bottom: 3px !important;
+            min-height: 14px !important;
+            justify-content: flex-end !important;
+        }
+        .heatmap-axis-layout {
+            grid-template-columns: 20px minmax(0, 1fr) !important;
+            grid-template-rows: 18px auto 18px !important;
+            column-gap: 4px !important;
+            row-gap: 3px !important;
+            align-content: start !important;
+        }
+        .heatmap-axis-x {
+            min-height: 18px !important;
+        }
+        .heatmap-axis-y {
+            min-height: 0 !important;
+        }
+        .heatmap-grid-wrap {
+            justify-content: flex-start !important;
+            gap: 0 !important;
+        }
+        .heatmap-grid {
+            height: auto !important;
+            max-height: none !important;
+            grid-template-columns: 64px repeat(3, minmax(50px, 1fr)) !important;
+            grid-template-rows: 26px repeat(3, 58px) !important;
+            gap: 5px !important;
+            min-height: 0 !important;
+        }
+        .heatmap-corner,
+        .heatmap-col-label,
+        .heatmap-row-label,
+        .heatmap-cell {
+            border-radius: 9px !important;
+        }
+        .heatmap-cell {
+            min-height: 0 !important;
+            font-size: 18px !important;
+        }
+        .heatmap-legend {
+            align-self: center !important;
+            padding-top: 2px !important;
+            margin-top: 0 !important;
+            height: 18px !important;
+        }
+        .heatmap-scale {
+            width: 78px !important;
+        }
+
+
+        /* ==================== 本轮优化：热力图居中并补充摘要信息 ==================== */
+        .service-overview-card {
+            min-height: 0 !important;
+        }
+        .service-overview-card .section-title {
+            flex-shrink: 0;
+        }
+        .match-heatmap {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            gap: 10px !important;
+            padding: 10px 10px 12px !important;
+        }
+        .heatmap-note {
+            justify-content: center !important;
+            margin-bottom: 2px !important;
+        }
+        .heatmap-axis-layout {
+            flex: 0 0 auto !important;
+            height: auto !important;
+            grid-template-columns: 22px minmax(0, 1fr) !important;
+            grid-template-rows: 20px auto 20px !important;
+            column-gap: 5px !important;
+            row-gap: 5px !important;
+            align-content: center !important;
+        }
+        .heatmap-grid-wrap {
+            justify-content: center !important;
+        }
+        .heatmap-grid {
+            height: auto !important;
+            grid-template-columns: 66px repeat(3, minmax(52px, 1fr)) !important;
+            grid-template-rows: 28px repeat(3, 54px) !important;
+            gap: 5px !important;
+        }
+        .heatmap-legend {
+            height: 20px !important;
+            padding-top: 0 !important;
+        }
+        .heatmap-insights {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            width: 100%;
+        }
+        .heatmap-insight-card {
+            min-width: 0;
+            padding: 9px 8px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(240,247,255,0.92));
+            border: 1px solid #dcebf9;
+            box-shadow: 0 6px 14px rgba(22,119,255,0.06);
+        }
+        .insight-label {
+            display: block;
+            color: #7b8794;
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+        .heatmap-insight-card strong {
+            display: block;
+            color: #172033;
+            font-size: 12px;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .insight-desc {
+            display: block;
+            margin-top: 4px;
+            color: #1677ff;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+        /* ==================== 本轮优化：热力图单元格可下钻名单 ==================== */
+        .heatmap-corner {
+            background: transparent !important;
+            border-color: transparent !important;
+            box-shadow: none !important;
+        }
+        .heatmap-cell::after {
+            content: "查看名单";
+            position: absolute;
+            right: 6px;
+            top: 5px;
+            font-size: 9px;
+            font-weight: 700;
+            color: rgba(22,119,255,0.70);
+            opacity: 0;
+            transition: opacity 0.18s ease;
+        }
+        .heatmap-cell:hover::after { opacity: 1; }
+        .heat-5::after, .heat-6::after { color: rgba(255,255,255,0.82); }
+        .heatmap-list-count { color: #1677ff; font-weight: 900; }
+
+    
+
+        /* ==================== 风格统一：对齐政策卡片/企业卡片页面 ==================== */
+        body {
+            min-width: 1200px;
+            background: #f9fafb !important;
+            color: #1f2937 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif !important;
+        }
+
+        .main-wrapper {
+            background: #f9fafb;
+        }
+
+        .header {
+            height: 56px !important;
+            margin: 0 !important;
+            padding: 0 24px !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            color: #4b5563 !important;
+        }
+        .platform-name {
+            color: #1f2937 !important;
+            font-size: 18px !important;
+            font-weight: 800 !important;
+            letter-spacing: .4px !important;
+        }
+        .header-left::after {
+            content: "智能匹配政策与企业，精准发现可申报企业，提升政策转化效果";
+            margin-left: 24px;
+            color: #9ca3af;
+            font-size: 12px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .header-right {
+            color: #4b5563 !important;
+            gap: 16px !important;
+        }
+        .header-right .user-profile {
+            background: transparent !important;
+            border: 0 !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            backdrop-filter: none !important;
+        }
+        .header-right .avatar {
+            width: 32px !important;
+            height: 32px !important;
+            border: 2px solid #fff !important;
+            box-shadow: 0 2px 10px rgba(15,23,42,.10) !important;
+        }
+        .header-right .user-profile div div:first-child {
+            color: #1f2937 !important;
+            font-weight: 700 !important;
+        }
+        .header-right .user-profile div div:last-child {
+            color: #9ca3af !important;
+            font-size: 12px !important;
+        }
+
+        .content-area {
+            padding: 16px !important;
+            gap: 0 !important;
+            background: #f9fafb !important;
+        }
+        .main-content {
+            padding: 0 16px 0 0 !important;
+            gap: 16px !important;
+            overflow-y: auto !important;
+        }
+        .role-section {
+            border-radius: 8px !important;
+            padding: 16px !important;
+            border: 1px solid #f3f4f6 !important;
+            background: #fff !important;
+            box-shadow: 0 1px 2px rgba(15,23,42,.04) !important;
+            overflow: visible !important;
+        }
+        .role-section::before { display: none !important; }
+        .role-section-title {
+            margin-bottom: 14px !important;
+            padding: 0 !important;
+        }
+        .role-title-main {
+            color: #1f2937 !important;
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            gap: 8px !important;
+        }
+        .role-title-main::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            border-radius: 2px;
+            background: #2563eb;
+        }
+
+        .card {
+            background: #fff !important;
+            border: 1px solid #f3f4f6 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 2px rgba(15,23,42,.04) !important;
+            padding: 16px !important;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(15,23,42,.06) !important;
+        }
+        .section-title {
+            color: #1f2937 !important;
+            font-size: 15px !important;
+            font-weight: 800 !important;
+            margin-bottom: 12px !important;
+        }
+        .service-overview-card .section-title > div:first-child::before,
+        .policy-list-card .section-title > div:first-child::before,
+        .enterprise-policy-card .section-title > div:first-child::before,
+        .ai-flash-card .section-title > div:first-child::before {
+            width: 4px !important;
+            height: 16px !important;
+            border-radius: 2px !important;
+            background: #2563eb !important;
+        }
+
+        .kpi-grid { gap: 16px !important; }
+        .manager-kpi-grid .kpi-card {
+            min-height: 96px !important;
+            background: #fff !important;
+            overflow: hidden !important;
+        }
+        .manager-kpi-grid .kpi-card::after {
+            background: #f8fafc !important;
+            opacity: 1 !important;
+        }
+        .kpi-header {
+            color: #6b7280 !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+        }
+        .kpi-icon-wrapper {
+            border-radius: 8px !important;
+            width: 32px !important;
+            height: 32px !important;
+            box-shadow: none !important;
+        }
+        .kpi-value {
+            color: #111827 !important;
+            font-size: 30px !important;
+            font-weight: 800 !important;
+        }
+        .kpi-value small { color: #6b7280 !important; }
+        .kpi-value.clickable-number {
+            color: #2563eb !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .kpi-value.clickable-number::after {
+            background: #eff6ff !important;
+            border: 1px solid #dbeafe !important;
+            color: #2563eb !important;
+            box-shadow: none !important;
+        }
+
+        .service-top-layout {
+            grid-template-columns: 370px minmax(0, 1fr) !important;
+            gap: 16px !important;
+        }
+        .service-card-stack,
+        .policy-enterprise-column { gap: 16px !important; }
+
+        .match-heatmap {
+            background: #f8fbff !important;
+            border: 1px solid #e7eef8 !important;
+            border-radius: 10px !important;
+            box-shadow: none !important;
+            padding: 12px !important;
+        }
+        .heatmap-axis-x,
+        .heatmap-axis-y,
+        .heatmap-col-label,
+        .heatmap-row-label {
+            background: #fff !important;
+            border: 1px solid #e5e7eb !important;
+            color: #4b5563 !important;
+        }
+        .heatmap-cell {
+            border-radius: 8px !important;
+            box-shadow: none !important;
+        }
+        .heatmap-insight-card {
+            background: #fff !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+        }
+        .insight-desc { color: #2563eb !important; }
+
+        .overview-table-wrap, .policy-table-wrap,
+        .enterprise-table {
+            border-color: #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+        }
+        .overview-table th, .policy-list-table th, .enterprise-table th,
+        .list-modal-table th {
+            background: #f8fafc !important;
+            color: #64748b !important;
+            font-weight: 800 !important;
+        }
+        .overview-table td, .policy-list-table td, .enterprise-table td,
+        .list-modal-table td {
+            color: #334155 !important;
+        }
+        .overview-table tbody tr:nth-child(even),
+        .policy-list-table tbody tr:nth-child(even),
+        .enterprise-table tbody tr:nth-child(even) {
+            background: transparent !important;
+        }
+        tbody tr:hover,
+        .overview-table tbody tr:hover,
+        .policy-list-table tbody tr:hover,
+        .enterprise-table tbody tr:hover {
+            background: #f8fbff !important;
+        }
+        .policy-name-cell,
+        .metric-link,
+        .policy-count.high,
+        .overview-table .count-cell {
+            color: #2563eb !important;
+            font-weight: 800 !important;
+        }
+        .policy-level,
+        .node-tag,
+        .status-badge,
+        .policy-type-badge,
+        .flash-tag,
+        .tag {
+            border-radius: 4px !important;
+            font-weight: 700 !important;
+        }
+        .policy-level,
+        .node-tag,
+        .status-badge {
+            background: #eff6ff !important;
+            color: #2563eb !important;
+            border: 1px solid #dbeafe !important;
+        }
+        .policy-type-badge {
+            background: #f0fdf4 !important;
+            color: #16a34a !important;
+            border: 1px solid #bbf7d0 !important;
+        }
+        .status-badge.neutral {
+            background: #f3f4f6 !important;
+            color: #6b7280 !important;
+            border: 1px solid #e5e7eb !important;
+        }
+        .btn-table-action,
+        .more-link {
+            border-radius: 6px !important;
+            background: #fff !important;
+            border: 1px solid #bfdbfe !important;
+            color: #2563eb !important;
+            box-shadow: none !important;
+            font-weight: 800 !important;
+        }
+        .btn-table-action:hover,
+        .more-link:hover {
+            background: #eff6ff !important;
+            border-color: #93c5fd !important;
+            color: #1d4ed8 !important;
+            text-decoration: none !important;
+        }
+
+        .ai-sidebar {
+            width: 320px !important;
+            gap: 12px !important;
+            padding-left: 16px !important;
+            border-left: 1px solid #e5e7eb !important;
+            background: #fff !important;
+            box-shadow: -4px 0 15px rgba(15,23,42,.02) !important;
+        }
+        .ai-flash-card {
+            border-radius: 8px !important;
+            background: #fff !important;
+            box-shadow: none !important;
+        }
+        .ai-flash-card .flash-content {
+            background: #f8fafc !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 8px !important;
+        }
+        .btn-ai {
+            border-radius: 8px !important;
+            background: #2563eb !important;
+            box-shadow: 0 4px 10px rgba(37,99,235,.18) !important;
+            font-weight: 800 !important;
+        }
+        .btn-ai:hover { background: #1d4ed8 !important; }
+        .ai-chat-panel {
+            border-radius: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            background: #fff !important;
+        }
+        .ai-header {
+            padding: 16px !important;
+            background: #fff !important;
+            border-bottom: 1px solid #e5e7eb !important;
+        }
+        .ai-content {
+            background: #fafafa !important;
+            padding: 16px !important;
+            gap: 16px !important;
+        }
+        .chat-bubble {
+            border-radius: 8px !important;
+            font-size: 13px !important;
+            line-height: 1.6 !important;
+            padding: 10px 14px !important;
+        }
+        .chat-ai {
+            background: #fff !important;
+            border: 1px solid #e5e7eb !important;
+            color: #303133 !important;
+            box-shadow: 0 2px 6px rgba(15,23,42,.04) !important;
+        }
+        .chat-user {
+            background: #2563eb !important;
+            color: #fff !important;
+        }
+        .suggestion-pill {
+            border-radius: 16px !important;
+            background: #f0f2f5 !important;
+            border: 1px solid transparent !important;
+            color: #2563eb !important;
+        }
+        .suggestion-pill:hover {
+            background: #eff6ff !important;
+            border-color: #2563eb !important;
+            transform: none !important;
+        }
+        .ai-input-area {
+            padding: 16px !important;
+            background: #fff !important;
+            border-top: 1px solid #e5e7eb !important;
+        }
+        .input-box {
+            border-radius: 4px !important;
+            background: #fff !important;
+            border-color: #d1d5db !important;
+            font-size: 13px !important;
+        }
+        .input-box:focus { border-color: #2563eb !important; }
+        .send-btn.active, .send-btn:hover { color: #2563eb !important; }
+
+        .flash-modal,
+        .match-modal,
+        .list-modal {
+            border-radius: 12px !important;
+            border: 0 !important;
+            box-shadow: 0 18px 48px rgba(15,23,42,.22) !important;
+        }
+        .flash-modal-header,
+        .match-modal-header,
+        .list-modal-header {
+            background: #fff !important;
+            border-bottom: 1px solid #eef2f7 !important;
+        }
+
+        @media (max-width: 1280px) {
+            .header-left::after { display: none; }
+            .service-top-layout { grid-template-columns: 1fr !important; }
+            .main-content { overflow-y: auto !important; }
+        }
+
+
+        /* ==================== 本轮优化：政策/企业列表字段与入口样式 ==================== */
+        .section-title .more-link {
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: #2563eb !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            border-radius: 0 !important;
+        }
+        .section-title .more-link:hover {
+            background: transparent !important;
+            border: none !important;
+            color: #1d4ed8 !important;
+            text-decoration: underline !important;
+        }
+        .policy-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
+        .policy-status-badge.active { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .policy-status-badge.ending { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+        .policy-status-badge.closed { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+        .policy-list-table th:nth-child(1), .policy-list-table td:nth-child(1) { width: 43% !important; }
+        .policy-list-table th:nth-child(2), .policy-list-table td:nth-child(2) { width: 17% !important; text-align: center; }
+        .policy-list-table th:nth-child(3), .policy-list-table td:nth-child(3) { width: 16% !important; text-align: center; }
+        .policy-list-table th:nth-child(4), .policy-list-table td:nth-child(4) { width: 13% !important; text-align: center; }
+        .policy-list-table th:nth-child(5), .policy-list-table td:nth-child(5) { width: 11% !important; text-align: center; overflow: visible; }
+        .enterprise-table th:nth-child(1), .enterprise-table td:nth-child(1) { width: 43% !important; }
+        .enterprise-table th:nth-child(2), .enterprise-table td:nth-child(2) { width: 18% !important; text-align: center; }
+        .enterprise-table th:nth-child(3), .enterprise-table td:nth-child(3) { width: 17% !important; text-align: center; }
+        .enterprise-table th:nth-child(4), .enterprise-table td:nth-child(4) { width: 12% !important; text-align: center; }
+        .enterprise-table th:nth-child(5), .enterprise-table td:nth-child(5) { width: 10% !important; text-align: center; overflow: visible; }
+
+    
+        /* ==================== 政策覆盖度分析卡片优化 ==================== */
+        .coverage-analysis {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+            padding: 4px 6px;
+        }
+        .coverage-total {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: linear-gradient(135deg,#eff6ff,#ffffff);
+            border: 1px solid #dbeafe;
+            margin-bottom: 4px;
+        }
+        .coverage-total-left {
+            display:flex;
+            flex-direction:column;
+            gap:4px;
+        }
+        .coverage-total-value {
+            font-size: 38px;
+            line-height:1;
+            font-weight:900;
+            color:#2563eb;
+        }
+        .coverage-total-label {
+            font-size:13px;
+            color:#4b5563;
+            font-weight:700;
+        }
+        .coverage-total-desc {
+            font-size:12px;
+            color:#6b7280;
+            background:#fff;
+            padding:8px 10px;
+            border-radius:8px;
+            border:1px solid #e5e7eb;
+        }
+        .coverage-item {
+            display:grid;
+            grid-template-columns:82px 1fr 46px;
+            align-items:center;
+            gap:10px;
+        }
+        .coverage-name {
+            font-size:13px;
+            font-weight:800;
+            color:#374151;
+            line-height:1.35;
+        }
+        .coverage-bar-bg {
+            height:10px;
+            background:#e5e7eb;
+            border-radius:999px;
+            overflow:hidden;
+        }
+        .coverage-bar {
+            height:100%;
+            border-radius:999px;
+        }
+        .coverage-value {
+            font-size:14px;
+            font-weight:900;
+            text-align:right;
+        }
+        .coverage-tags {
+            display:flex;
+            gap:6px;
+            flex-wrap:wrap;
+            margin-left:92px;
+            margin-top:-8px;
+            margin-bottom:2px;
+        }
+        .coverage-tag {
+            padding:3px 8px;
+            border-radius:4px;
+            font-size:11px;
+            font-weight:700;
+        }
+        .coverage-ai-tip {
+            margin-top:8px;
+            padding:10px 12px;
+            background:#f8fafc;
+            border-radius:8px;
+            border-left:3px solid #2563eb;
+            color:#4b5563;
+            font-size:12px;
+            line-height:1.5;
+        }
+    
+        /* ==================== 最终优化：覆盖度布局与AI侧栏 ==================== */
+        .coverage-total {
+            justify-content:space-between;
+            background:#fff;
+            border:none;
+            padding:8px 0;
+            margin-bottom:6px;
+        }
+        .coverage-total-left {
+            flex-direction:row;
+            align-items:center;
+            gap:10px;
+        }
+        .coverage-total-value {
+            font-size:32px;
+            color:#2563eb;
+        }
+        .coverage-total-label {
+            font-size:15px;
+            color:#1f2937;
+            font-weight:800;
+        }
+        .coverage-total-desc {
+            display:none;
+        }
+        .coverage-info-icon {
+            position:relative;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:16px;
+            height:16px;
+            border-radius:50%;
+            background:#f3f4f6;
+            color:#64748b;
+            font-size:11px;
+            cursor:pointer;
+            margin-left:4px;
+        }
+        .coverage-info-icon .coverage-tooltip {
+            display:none;
+            position:absolute;
+            width:280px;
+            left:50%;
+            top:24px;
+            transform:translateX(-50%);
+            background:#1f2937;
+            color:#fff;
+            padding:10px 12px;
+            border-radius:6px;
+            font-size:12px;
+            line-height:1.5;
+            z-index:100;
+            font-weight:normal;
+        }
+        .coverage-info-icon:hover .coverage-tooltip {
+            display:block;
+        }
+        .coverage-ai-tip {
+            margin-top:6px;
+            padding:8px 10px;
+            font-size:12px;
+            line-height:1.4;
+        }
+        .ai-sidebar {
+            background:#f5f9ff !important;
+            border-left:1px solid #dbeafe !important;
+            padding-left:16px !important;
+        }
+        .ai-flash-card,
+        .ai-chat-panel {
+            background:#fff !important;
+        }
+
+
+        /* ==================== 覆盖度卡片视觉优化 ==================== */
+        .coverage-total {
+            position:relative;
+            padding:14px 16px !important;
+            border-radius:12px !important;
+            background:linear-gradient(135deg,#f5f9ff 0%,#ffffff 100%) !important;
+            border:1px solid #dbeafe !important;
+            box-shadow:0 4px 12px rgba(37,99,235,.08);
+            margin-bottom:10px !important;
+        }
+        .coverage-total-left {
+            flex-direction:column !important;
+            align-items:flex-start !important;
+            gap:8px !important;
+        }
+        .coverage-total-label {
+            font-size:14px !important;
+            color:#475569 !important;
+            font-weight:800 !important;
+            display:flex;
+            align-items:center;
+        }
+        .coverage-total-value {
+            font-size:40px !important;
+            line-height:1 !important;
+            color:#2563eb !important;
+            letter-spacing:-1px;
+        }
+        .coverage-total::after {
+            content:"园区企业政策适配情况总览";
+            position:absolute;
+            right:16px;
+            bottom:16px;
+            font-size:12px;
+            color:#94a3b8;
+            background:#fff;
+            padding:5px 8px;
+            border-radius:6px;
+            border:1px solid #e5e7eb;
+        }
+
+        /* ==================== AI侧栏突出 ==================== */
+        .ai-sidebar {
+            background:linear-gradient(180deg,#eaf3ff 0%,#dbeafe 100%) !important;
+            border-left:1px solid #bfdbfe !important;
+            padding:14px !important;
+            gap:14px !important;
+        }
+        .ai-flash-card {
+            border-radius:12px !important;
+            box-shadow:0 4px 14px rgba(37,99,235,.12) !important;
+            border:1px solid #cfe3ff !important;
+        }
+        .ai-chat-panel {
+            border-radius:12px !important;
+            overflow:hidden;
+            box-shadow:0 4px 16px rgba(37,99,235,.12) !important;
+            border:1px solid #cfe3ff !important;
+        }
+        .ai-header {
+            background:linear-gradient(90deg,#eff6ff,#dbeafe) !important;
+            color:#1e40af !important;
+        }
+        .ai-content {
+            background:#f8fbff !important;
+        }
+
+
+        /* ==================== 修复覆盖度卡片遮挡与提示框 ==================== */
+        .coverage-total {
+            overflow: visible !important;
+            min-height: 76px;
+        }
+        .coverage-total::after {
+            display:none !important;
+        }
+        .coverage-total-left {
+            position:relative;
+            z-index:2;
+        }
+        .coverage-total-label {
+            white-space:nowrap;
+        }
+        .coverage-info-icon {
+            position:relative;
+            z-index:10;
+        }
+        .coverage-info-icon .coverage-tooltip {
+            display:none;
+            position:absolute;
+            left:50%;
+            top:26px;
+            transform:translateX(-15%);
+            width:300px;
+            white-space:normal;
+            word-break:break-all;
+            line-height:1.6;
+            padding:12px 14px;
+            background:#1f2937;
+            color:#fff;
+            border-radius:8px;
+            box-shadow:0 8px 20px rgba(0,0,0,.18);
+            font-size:12px;
+        }
+        .coverage-info-icon:hover .coverage-tooltip {
+            display:block;
+        }
+
+</style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <header class="header">
+            <div class="header-left">
+                <span class="platform-name">泉州市南安市政策匹配平台</span>
+            </div>
+            <div class="header-right">
+                <span class="clickable">2026-07-01 📅</span>
+                <span class="clickable" style="position:relative;">🔔<span style="position:absolute; top:-4px; right:-4px; background:red; width:6px; height:6px; border-radius:50%;"></span></span>
+                <div class="user-profile">
+                    <div class="avatar" style="background: url('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix') no-repeat center/cover; width:32px; height:32px; border-radius:50%; display:inline-block; vertical-align:middle;"></div>
+                    <div style="display:inline-block; vertical-align:middle; margin-left:8px;">
+                        <div style="font-weight:bold; color:#333;">林晓明</div>
+                        <div style="font-size:12px; color:#909399;">园区管理员</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-area">
+            <main class="main-content">
+                
+                <section class="role-section manager-section">
+                    <div class="role-section-title">
+                        <div class="role-title-main">📊 园区政策服务总览</div>
+                    </div>
+                    <div class="manager-layout">
+                        <section class="kpi-grid manager-kpi-grid">
+                    <div class="card kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrapper" style="background:#e6f7ff; color:#1890ff;">📑</div>
+                            覆盖政策数
+                        </div>
+                        <div class="kpi-value-container">
+                            <div class="kpi-value clickable-number" id="policyTotalValue" data-tip="查看清单" title="点击查看政策清单">84 <small>条</small></div>
+                        </div>
+                    </div>
+
+                    <div class="card kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrapper" style="background:#f0f9eb; color:#67c23a;">🏢</div>
+                            已服务企业数
+                        </div>
+                        <div class="kpi-value-container">
+                            <div class="kpi-value clickable-number" id="enterpriseTotalValue" data-tip="查看名单" title="点击查看企业名单">326 <small>家</small></div>
+                        </div>
+                    </div>
+
+                    <div class="card kpi-card">
+                        <div class="kpi-header">
+                            <div class="kpi-icon-wrapper" style="background:#f9f0ff; color:#722ed1;">🔍</div>
+                            累计匹配分析
+                        </div>
+                        <div class="kpi-value-container">
+                            <div class="kpi-value clickable-number" id="matchAnalysisValue" data-tip="查看分布" title="点击查看政策匹配结果分布">186 <small>次</small></div>
+                        </div>
+                    </div>
+                </section>
+                    </div>
+                </section>
+
+                <section class="role-section service-section">
+                    <div class="role-section-title">
+                        <div class="role-title-main">🧑‍💼 服务工作台</div>
+                    </div>
+                <div class="service-card-stack">
+                    <div class="service-top-layout">
+                        <section class="card service-overview-card" style="display:flex; flex-direction:column;">
+                            <div class="section-title">
+                                <div>匹配结果分析</div>
+                            </div>
+                            <div class="coverage-analysis">
+                                <div class="coverage-total">
+                                    <div class="coverage-total-left">
+                                        <span class="coverage-total-label">
+                                            园区政策覆盖度
+                                            <span class="coverage-info-icon">?
+                                                <span class="coverage-tooltip">
+                                                    政策覆盖率 = (至少有一项高匹配政策的企业数 / 园区总企业数) × 100%
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <span class="coverage-total-value">67%</span>
+                                </div>
+
+                                <div class="coverage-item">
+                                    <div class="coverage-name">上游<br><span style="font-size:11px;color:#9ca3af;">研发/原材料</span></div>
+                                    <div class="coverage-bar-bg">
+                                        <div class="coverage-bar" style="width:45%;background:#34a853;"></div>
+                                    </div>
+                                    <div class="coverage-value" style="color:#34a853;">45%</div>
+                                </div>
+                                <div class="coverage-tags">
+                                    <span class="coverage-tag" style="background:#ecfdf3;color:#34a853;">研发费用加计扣除</span>
+                                    <span class="coverage-tag" style="background:#ecfdf3;color:#34a853;">技术创新</span>
+                                </div>
+
+                                <div class="coverage-item">
+                                    <div class="coverage-name">中游<br><span style="font-size:11px;color:#9ca3af;">生产制造</span></div>
+                                    <div class="coverage-bar-bg">
+                                        <div class="coverage-bar" style="width:82%;background:#2563eb;"></div>
+                                    </div>
+                                    <div class="coverage-value" style="color:#2563eb;">82%</div>
+                                </div>
+                                <div class="coverage-tags">
+                                    <span class="coverage-tag" style="background:#eff6ff;color:#2563eb;">技术改造</span>
+                                    <span class="coverage-tag" style="background:#eff6ff;color:#2563eb;">设备更新</span>
+                                    <span class="coverage-tag" style="background:#eff6ff;color:#2563eb;">专精特新</span>
+                                </div>
+
+                                <div class="coverage-item">
+                                    <div class="coverage-name">下游<br><span style="font-size:11px;color:#9ca3af;">应用/销售</span></div>
+                                    <div class="coverage-bar-bg">
+                                        <div class="coverage-bar" style="width:51%;background:#f59e0b;"></div>
+                                    </div>
+                                    <div class="coverage-value" style="color:#f59e0b;">51%</div>
+                                </div>
+                                <div class="coverage-tags">
+                                    <span class="coverage-tag" style="background:#fff7ed;color:#f59e0b;">市场拓展</span>
+                                    <span class="coverage-tag" style="background:#fff7ed;color:#f59e0b;">应用推广</span>
+                                </div>
+
+                                <div class="coverage-ai-tip">
+                                    🤖 AI建议：中游生产制造环节政策覆盖度最高，建议优先推动技改类、设备更新类政策触达；上游企业重点补充研发能力，下游企业重点关注市场拓展类政策。
+                                </div>
+                            </div>
+                        </section>
+                        <div class="policy-enterprise-column">
+                        <section class="card policy-list-card" style="display:flex; flex-direction:column;">
+                            <div class="section-title">
+                                <div>政策找企业</div>
+                                <div class="more-link">查看全部政策 ></div>
+                            </div>
+                            <div class="policy-table-wrap" style="flex:1;">
+                                <table class="policy-list-table">
+                                    <thead>
+                                        <tr>
+                                            <th>政策名称</th>
+                                            <th>政策类型</th>
+                                            <th>高匹配企业数</th>
+                                            <th>状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="policy-name-cell" onclick="openPolicyCard('tech_reform')">泉州市高质量发展支持企业技术改造专项</td>
+                                            <td><span class="policy-type-badge">技改类</span></td>
+                                            <td><span class="metric-link">14 家</span></td>
+                                            <td><span class="policy-status-badge ending">7天内截止</span></td>
+                                            <td><button class="btn-table-action" onclick="openPolicyCard('tech_reform')">查看</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="policy-name-cell" onclick="openPolicyCard('specialty')">泉州市专精特新中小企业梯度培育计划</td>
+                                            <td><span class="policy-type-badge">培育类</span></td>
+                                            <td><span class="metric-link">9 家</span></td>
+                                            <td><span class="policy-status-badge active">申报中</span></td>
+                                            <td><button class="btn-table-action" onclick="openPolicyCard('specialty')">查看</button></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="policy-name-cell" onclick="openPolicyCard('high_tech')">南安市高新技术企业培育奖励政策</td>
+                                            <td><span class="policy-type-badge">高企培育</span></td>
+                                            <td><span class="metric-link">16 家</span></td>
+                                            <td><span class="policy-status-badge closed">已结束</span></td>
+                                            <td><button class="btn-table-action" onclick="openPolicyCard('high_tech')">查看</button></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                    <section class="card enterprise-policy-card" style="display:flex; flex-direction:column;">
+                        <div class="section-title">
+                            <div>企业找政策</div>
+                            <div class="more-link">查看全部企业 ></div>
+                        </div>
+                        <table class="enterprise-table" style="flex:1;">
+                            <thead>
+                                <tr>
+                                    <th>企业名称</th>
+                                    <th>所属节点</th>
+                                    <th>高匹配政策数</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="companyTable">
+                                <tr data-company="泉州南安智能装备有限公司">
+                                    <td style="font-weight:bold; color:#1890ff;">泉州南安智能装备有限公司</td>
+                                    <td><span class="node-tag">轴承</span></td>
+                                    <td><span class="policy-count high">3</span></td>
+                                    <td><span class="status-badge">培育中</span></td>
+                                    <td><button class="btn-table-action">查看详情</button></td>
+                                </tr>
+                                <tr data-company="福建蓝田新材料科技有限公司">
+                                    <td style="font-weight:bold; color:#1890ff;">福建蓝田新材料科技有限公司</td>
+                                    <td><span class="node-tag">数控机床</span></td>
+                                    <td><span class="policy-count high">2</span></td>
+                                    <td><span class="status-badge">培育中</span></td>
+                                    <td><button class="btn-table-action">查看详情</button></td>
+                                </tr>
+                                <tr data-company="泉州科能精密制造有限公司">
+                                    <td style="font-weight:bold; color:#1890ff;">泉州科能精密制造有限公司</td>
+                                    <td><span class="node-tag">纺织机械</span></td>
+                                    <td><span class="policy-count high">5</span></td>
+                                    <td><span class="status-badge neutral">未培育</span></td>
+                                    <td><button class="btn-table-action">查看详情</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+                        </div>
+                    </div>
+                </div>
+                </section>
+
+            </main>
+
+            <aside class="ai-sidebar">
+                    <section class="card flash-card ai-flash-card clickable" id="flashSummaryCard" title="点击查看完整快讯">
+                        <div class="section-title" style="margin-bottom: 12px;">
+                            <div>今日快讯</div>
+                            <span class="more-link" style="font-size:12px;">查看详情</span>
+                        </div>
+                        <div class="flash-content">
+                            <div class="flash-list-item">
+                                <span class="flash-tag tag-red">政策时效提醒</span>
+                                <span class="flash-text">2项申报临近截止</span>
+                            </div>
+                            <div class="flash-list-item">
+                                <span class="flash-tag tag-green">当日新增政策</span>
+                                <span class="flash-text">新增2项惠企政策</span>
+                            </div>
+                            <div class="flash-list-item">
+                                <span class="flash-tag tag-blue">TOP 咨询问题</span>
+                                <span class="flash-text">高频咨询技改、高企</span>
+                            </div>
+                        </div>
+                        <button class="btn-ai" id="generateWorkSuggestionBtn">🤖 AI 生成工作建议</button>
+                    </section>
+
+
+                <div class="ai-chat-panel">
+                <div class="ai-header">
+                    <div style="display:flex; align-items:center; gap:8px; color:#1890ff;">🤖 园区智能工作台</div>
+                    <div style="color:#909399; font-weight:normal;" class="clickable" id="resetChatBtn">🔄 清空</div>
+                </div>
+                
+                <div class="ai-content" id="chatBody">
+                    <div class="chat-bubble chat-ai">
+                        您好！我是您的政策匹配助手，可以基于当前页面数据快速分析：
+                        <div class="ai-suggestions">
+                            <div class="suggestion-pill" data-query="当前政策匹配整体情况如何？">当前政策匹配整体情况如何？</div>
+                            <div class="suggestion-pill" data-query="哪些政策建议优先查看？">哪些政策建议优先查看？</div>
+                            <div class="suggestion-pill" data-query="高匹配、中匹配、低匹配分别代表什么？">高匹配、中匹配、低匹配分别代表什么？</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ai-input-area">
+                    <div class="input-box-wrapper">
+                        <input type="text" id="aiInput" class="input-box" placeholder="请输入您的问题（支持回车）...">
+                        <span id="sendBtn" class="send-btn">➤</span>
+                    </div>
+                    <div style="font-size:12px; color:#c0c4cc; text-align:center; margin-top:8px;">内容由AI生成，仅供参考</div>
+                </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+
+    <div class="match-modal-mask" id="matchModal">
+        <div class="match-modal" role="dialog" aria-modal="true" aria-labelledby="matchModalTitle">
+            <div class="match-modal-header">
+                <div class="match-modal-title" id="matchModalTitle">📈 政策匹配结果分布</div>
+                <button class="match-modal-close" type="button" id="closeMatchModal">×</button>
+            </div>
+            <div class="match-modal-body">
+                <div class="match-chart-layout">
+                    <div class="donut-chart" aria-label="政策匹配结果分布：高匹配33%，中匹配49%，低匹配18%">
+                        <div class="donut-center">
+                            <div class="donut-total-label">总计</div>
+                            <div class="donut-total-value">186</div>
+                            <div class="donut-total-unit">组</div>
+                        </div>
+                    </div>
+                    <div class="match-legend">
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background:#1890ff;"></span>
+                            <span class="legend-name">高匹配</span>
+                            <span><span class="legend-count blue">62</span><span class="legend-unit">组</span></span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background:#36cfc9;"></span>
+                            <span class="legend-name">中匹配</span>
+                            <span><span class="legend-count green">91</span><span class="legend-unit">组</span></span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background:#faad14;"></span>
+                            <span class="legend-name">低匹配</span>
+                            <span><span class="legend-count orange">33</span><span class="legend-unit">组</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="match-modal-note">统计口径：1 家企业 × 1 项政策 = 1 组匹配结果；本模块仅统计已完成匹配度计算的结果。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="list-modal-mask" id="policyListModal">
+        <div class="list-modal" role="dialog" aria-modal="true" aria-labelledby="policyListModalTitle">
+            <div class="list-modal-header">
+                <div class="list-modal-title" id="policyListModalTitle">📑 政策清单</div>
+                <button class="list-modal-close" type="button" id="closePolicyListModal">×</button>
+            </div>
+            <div class="list-modal-body">
+                <div class="list-modal-table-wrap">
+                    <table class="list-modal-table">
+                        <thead>
+                            <tr><th style="width:48%;">政策名称</th><th style="width:18%;">政策类型</th><th style="width:18%;">高匹配企业</th><th style="width:16%;">状态</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="list-name-cell">泉州市高质量发展支持企业技术改造专项</td><td>技改类</td><td><span class="metric-link">14 家</span></td><td><span class="policy-status-badge active">申报中</span></td></tr>
+                            <tr><td class="list-name-cell">泉州市专精特新中小企业梯度培育计划</td><td>培育类</td><td><span class="metric-link">9 家</span></td><td><span class="policy-status-badge active">申报中</span></td></tr>
+                            <tr><td class="list-name-cell">南安市高新技术企业培育奖励政策</td><td>高企培育</td><td><span class="metric-link">16 家</span></td><td><span class="policy-status-badge ending">7天内截止</span></td></tr>
+                            <tr><td class="list-name-cell">南安市创新主体培育奖补政策</td><td>创新奖励</td><td><span class="metric-link">7 家</span></td><td><span class="policy-status-badge closed">已结束</span></td></tr>
+                            <tr><td class="list-name-cell">泉州市智能制造优秀场景培育政策</td><td>智能制造</td><td><span class="metric-link">6 家</span></td><td><span class="policy-status-badge closed">已结束</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="list-modal-note">当前仅展示重点政策示例，可点击“查看全部政策”进入完整政策库。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="list-modal-mask" id="enterpriseListModal">
+        <div class="list-modal" role="dialog" aria-modal="true" aria-labelledby="enterpriseListModalTitle">
+            <div class="list-modal-header">
+                <div class="list-modal-title" id="enterpriseListModalTitle">🏢 企业名单</div>
+                <button class="list-modal-close" type="button" id="closeEnterpriseListModal">×</button>
+            </div>
+            <div class="list-modal-body">
+                <div class="list-modal-table-wrap">
+                    <table class="list-modal-table">
+                        <thead>
+                            <tr><th style="width:46%;">企业名称</th><th style="width:20%;">所属节点</th><th style="width:18%;">高匹配政策数</th><th style="width:16%;">状态</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="list-name-cell">泉州南安智能装备有限公司</td><td>轴承</td><td><span class="policy-count high">3</span></td><td><span class="status-badge">培育中</span></td></tr>
+                            <tr><td class="list-name-cell">福建蓝田新材料科技有限公司</td><td>数控机床</td><td><span class="policy-count high">2</span></td><td><span class="status-badge">培育中</span></td></tr>
+                            <tr><td class="list-name-cell">泉州科能精密制造有限公司</td><td>纺织机械</td><td><span class="policy-count high">5</span></td><td><span class="status-badge neutral">未培育</span></td></tr>
+                            <tr><td class="list-name-cell">南安精工轴承制造有限公司</td><td>轴承</td><td><span class="policy-count high">4</span></td><td><span class="status-badge">培育中</span></td></tr>
+                            <tr><td class="list-name-cell">闽南数控装备有限公司</td><td>数控机床</td><td><span class="policy-count high">3</span></td><td><span class="status-badge neutral">未培育</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="list-modal-note">当前仅展示重点企业示例，可点击“查看全部企业”进入完整企业库。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="list-modal-mask" id="heatmapListModal">
+        <div class="list-modal" role="dialog" aria-modal="true" aria-labelledby="heatmapListModalTitle">
+            <div class="list-modal-header">
+                <div class="list-modal-title" id="heatmapListModalTitle">📌 高匹配企业名单</div>
+                <button class="list-modal-close" type="button" id="closeHeatmapListModal">×</button>
+            </div>
+            <div class="list-modal-body">
+                <div class="list-modal-table-wrap">
+                    <table class="list-modal-table">
+                        <thead>
+                            <tr>
+                                <th style="width:34%;">企业名称</th>
+                                <th style="width:18%;">产业节点</th>
+                                <th style="width:18%;">政策类型</th>
+                                <th style="width:18%;">匹配依据</th>
+                                <th style="width:12%;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heatmapListBody"></tbody>
+                    </table>
+                </div>
+                <div class="list-modal-note" id="heatmapListNote">点击热力图单元格后，可查看对应产业节点和政策类型下的高匹配企业名单。</div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="flash-modal-mask" id="flashModal">
+        <div class="flash-modal" role="dialog" aria-modal="true" aria-labelledby="flashModalTitle">
+            <div class="flash-modal-header">
+                <div class="flash-modal-title" id="flashModalTitle">📰 今日快讯</div>
+                <button class="flash-modal-close" type="button" id="closeFlashModal">×</button>
+            </div>
+            <div class="flash-modal-body">
+                <div class="flash-detail-item">
+                    <div class="flash-detail-title">
+                        <span class="flash-tag tag-red">政策时效提醒</span>
+                        <strong>2 项申报临近截止</strong>
+                    </div>
+                    <div class="flash-detail-text">当前有 2 项政策进入截止提醒：<br><br>1. <strong>泉州市高质量发展支持企业技术改造专项</strong>：剩余 30 天截止，当前匹配 14 家高匹配企业，建议优先通知企业准备设备投资、项目备案等申报材料。<br><br>2. <strong>南安市创新主体培育奖补政策</strong>：剩余 7 天截止，建议重点关注符合创新主体培育条件的企业。</div>
+                </div>
+                <div class="flash-detail-item">
+                    <div class="flash-detail-title">
+                        <span class="flash-tag tag-green">当日新增政策</span>
+                        <strong>新增 2 项惠企政策</strong>
+                    </div>
+                    <div class="flash-detail-text">今日新增关注政策：<br><br>1. <strong>泉州市智能制造优秀场景培育政策</strong>：适合具备数字化改造、智能产线建设基础的制造企业。<br><br>2. <strong>南安市创新主体培育奖补政策</strong>：重点关注研发投入、知识产权基础较好的企业。</div>
+                </div>
+                <div class="flash-detail-item">
+                    <div class="flash-detail-title">
+                        <span class="flash-tag tag-blue">TOP 咨询问题</span>
+                        <strong>企业高频咨询事项</strong>
+                    </div>
+                    <div class="flash-detail-text">企业今日高频咨询集中在技改设备奖补、高企奖励、专精特新申报条件，建议服务人员统一准备申报条件说明和材料清单。</div>
+                </div>
+            </div>
+            <div class="flash-modal-footer">
+                <button class="flash-modal-btn" type="button" id="modalGenerateWorkSuggestionBtn">🤖 AI 生成工作建议</button>
+                <button class="flash-modal-btn" type="button" id="finishFlashModal" style="margin-left:10px;background:#fff;color:#2563eb;border:1px solid #bfdbfe;box-shadow:none;">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openPolicyCard(policyId) {
+            window.location.href = `政策卡片.html?id=${policyId}&noDiagnosis=1`;
+        }
+
+        function openFlashModal() {
+            const modal = document.getElementById('flashModal');
+            if (modal) modal.classList.add('show');
+        }
+
+        function closeFlashModal() {
+            const modal = document.getElementById('flashModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        function openMatchModal() {
+            const modal = document.getElementById('matchModal');
+            if (modal) modal.classList.add('show');
+        }
+
+        function closeMatchModal() {
+            const modal = document.getElementById('matchModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        const matchAnalysisValue = document.getElementById('matchAnalysisValue');
+        const matchModal = document.getElementById('matchModal');
+        const closeMatchModalBtn = document.getElementById('closeMatchModal');
+        if (matchAnalysisValue) matchAnalysisValue.addEventListener('click', openMatchModal);
+        if (closeMatchModalBtn) closeMatchModalBtn.addEventListener('click', closeMatchModal);
+        if (matchModal) matchModal.addEventListener('click', (e) => { if (e.target.id === 'matchModal') closeMatchModal(); });
+
+
+        function openPolicyListModal() {
+            const modal = document.getElementById('policyListModal');
+            if (modal) modal.classList.add('show');
+        }
+        function closePolicyListModal() {
+            const modal = document.getElementById('policyListModal');
+            if (modal) modal.classList.remove('show');
+        }
+        function openEnterpriseListModal() {
+            const modal = document.getElementById('enterpriseListModal');
+            if (modal) modal.classList.add('show');
+        }
+        function closeEnterpriseListModal() {
+            const modal = document.getElementById('enterpriseListModal');
+            if (modal) modal.classList.remove('show');
+        }
+        const policyTotalValue = document.getElementById('policyTotalValue');
+        const enterpriseTotalValue = document.getElementById('enterpriseTotalValue');
+        const policyListModal = document.getElementById('policyListModal');
+        const enterpriseListModal = document.getElementById('enterpriseListModal');
+        const closePolicyListModalBtn = document.getElementById('closePolicyListModal');
+        const closeEnterpriseListModalBtn = document.getElementById('closeEnterpriseListModal');
+        if (policyTotalValue) policyTotalValue.addEventListener('click', openPolicyListModal);
+        if (enterpriseTotalValue) enterpriseTotalValue.addEventListener('click', openEnterpriseListModal);
+        if (closePolicyListModalBtn) closePolicyListModalBtn.addEventListener('click', closePolicyListModal);
+        if (closeEnterpriseListModalBtn) closeEnterpriseListModalBtn.addEventListener('click', closeEnterpriseListModal);
+        if (policyListModal) policyListModal.addEventListener('click', (e) => { if (e.target.id === 'policyListModal') closePolicyListModal(); });
+        if (enterpriseListModal) enterpriseListModal.addEventListener('click', (e) => { if (e.target.id === 'enterpriseListModal') closeEnterpriseListModal(); });
+
+        const flashSummaryCard = document.getElementById('flashSummaryCard');
+        const closeFlashModalBtn = document.getElementById('closeFlashModal');
+        const finishFlashModalBtn = document.getElementById('finishFlashModal');
+        const flashModal = document.getElementById('flashModal');
+        const generateWorkSuggestionBtn = document.getElementById('generateWorkSuggestionBtn');
+        const modalGenerateWorkSuggestionBtn = document.getElementById('modalGenerateWorkSuggestionBtn');
+
+        if (flashSummaryCard) flashSummaryCard.addEventListener('click', openFlashModal);
+        if (closeFlashModalBtn) closeFlashModalBtn.addEventListener('click', closeFlashModal);
+        if (finishFlashModalBtn) finishFlashModalBtn.addEventListener('click', closeFlashModal);
+        if (flashModal) flashModal.addEventListener('click', (e) => { if (e.target.id === 'flashModal') closeFlashModal(); });
+        if (generateWorkSuggestionBtn) {
+            generateWorkSuggestionBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                generateAISuggestion();
+            });
+        }
+        if (modalGenerateWorkSuggestionBtn) {
+            modalGenerateWorkSuggestionBtn.addEventListener('click', () => {
+                closeFlashModal();
+                generateAISuggestion();
+            });
+        }
+
+        document.querySelectorAll('#companyTable tr[data-company]').forEach(row => {
+            const compName = row.getAttribute('data-company');
+            const btn = row.querySelector('.btn-table-action');
+            if (!btn) return;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (compName === '泉州南安智能装备有限公司') {
+                    window.location.href = '企业卡片.html';
+                }
+            });
+        });
+
+
+        const aggregationHeatmapData = {
+            label: '横向：政策类型｜纵向：产业节点',
+            aria: '产业节点与政策类型高匹配企业数热力图',
+            rowHeader: '产业节点',
+            colHeader: '政策类型',
+            rows: ['数控机床', '轴承', '纺织机械'],
+            columns: ['技改类', '专精特新', '高企培育'],
+            values: [
+                [3, 2, 1],
+                [6, 5, 4],
+                [4, 3, 2]
+            ]
+        };
+
+        function heatClass(value) {
+            const safeValue = Math.max(0, Math.min(6, Number(value) || 0));
+            return `heat-${safeValue}`;
+        }
+
+        function renderAggregationChart() {
+            const chart = document.getElementById('aggregationChart');
+            const grid = document.getElementById('heatmapGrid');
+            const data = aggregationHeatmapData;
+            if (!chart || !grid) return;
+
+            chart.setAttribute('aria-label', data.aria);
+
+            const headerCells = [
+                `<div class="heatmap-corner" aria-hidden="true"></div>`,
+                ...data.columns.map(col => `<div class="heatmap-col-label" title="${data.colHeader}：${col}">${col}</div>`)
+            ];
+
+            const bodyCells = data.rows.map((row, rowIndex) => {
+                const cells = [`<div class="heatmap-row-label" title="${data.rowHeader}：${row}">${row}</div>`];
+                data.columns.forEach((col, colIndex) => {
+                    const value = data.values[rowIndex][colIndex];
+                    cells.push(`
+                        <div class="heatmap-cell ${heatClass(value)}" title="点击查看：${row} - ${col}，${value} 家高匹配企业" onclick="openHeatmapListModal('${row}', '${col}', ${value})">
+                            <span>${value}</span>
+                            <small>家</small>
+                        </div>
+                    `);
+                });
+                return cells.join('');
+            }).join('');
+
+            grid.innerHTML = headerCells.join('') + bodyCells;
+        }
+
+        renderAggregationChart();
+
+
+        const heatmapCompanyNames = {
+            '数控机床-技改类': ['福建蓝田新材料科技有限公司', '闽南数控装备有限公司', '南安精密数控设备有限公司'],
+            '数控机床-专精特新': ['福建蓝田新材料科技有限公司', '闽南数控装备有限公司'],
+            '数控机床-高企培育': ['南安精密数控设备有限公司'],
+            '轴承-技改类': ['泉州南安智能装备有限公司', '南安精工轴承制造有限公司', '福建恒锐轴承有限公司', '泉州鑫达精密部件有限公司', '南安华盛机械有限公司', '福建鼎盛传动科技有限公司'],
+            '轴承-专精特新': ['泉州南安智能装备有限公司', '南安精工轴承制造有限公司', '福建恒锐轴承有限公司', '泉州鑫达精密部件有限公司', '福建鼎盛传动科技有限公司'],
+            '轴承-高企培育': ['南安精工轴承制造有限公司', '福建恒锐轴承有限公司', '泉州鑫达精密部件有限公司', '福建鼎盛传动科技有限公司'],
+            '纺织机械-技改类': ['泉州科能精密制造有限公司', '南安纺机装备有限公司', '福建佳宏纺织机械有限公司', '泉州瑞成智能制造有限公司'],
+            '纺织机械-专精特新': ['泉州科能精密制造有限公司', '南安纺机装备有限公司', '福建佳宏纺织机械有限公司'],
+            '纺织机械-高企培育': ['泉州科能精密制造有限公司', '泉州瑞成智能制造有限公司']
+        };
+
+        function openHeatmapListModal(nodeName, policyType, count) {
+            const modal = document.getElementById('heatmapListModal');
+            const title = document.getElementById('heatmapListModalTitle');
+            const body = document.getElementById('heatmapListBody');
+            const note = document.getElementById('heatmapListNote');
+            if (!modal || !title || !body || !note) return;
+
+            const key = `${nodeName}-${policyType}`;
+            const names = heatmapCompanyNames[key] || [];
+            title.innerHTML = `📌 ${nodeName} × ${policyType} 企业名单`;
+            body.innerHTML = names.map((name, index) => `
+                <tr>
+                    <td class="list-name-cell" title="${name}">${name}</td>
+                    <td>${nodeName}</td>
+                    <td>${policyType}</td>
+                    <td><span class="heatmap-list-count">高匹配</span></td>
+                    <td><button class="btn-table-action" type="button">查看</button></td>
+                </tr>
+            `).join('') || `
+                <tr>
+                    <td colspan="5" style="text-align:center;color:#7b8794;">暂无企业名单</td>
+                </tr>
+            `;
+            note.innerHTML = `当前单元格统计 <strong>${count} 家</strong> 高匹配企业；名单为该产业节点下适配 <strong>${policyType}</strong> 的重点企业。`;
+            modal.classList.add('show');
+        }
+
+        function closeHeatmapListModal() {
+            const modal = document.getElementById('heatmapListModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        const heatmapListModal = document.getElementById('heatmapListModal');
+        const closeHeatmapListModalBtn = document.getElementById('closeHeatmapListModal');
+        if (closeHeatmapListModalBtn) closeHeatmapListModalBtn.addEventListener('click', closeHeatmapListModal);
+        if (heatmapListModal) heatmapListModal.addEventListener('click', (e) => { if (e.target.id === 'heatmapListModal') closeHeatmapListModal(); });
+
+
+        const presetResponses = {
+            '当前政策匹配整体情况如何？': `
+                当前平台共纳入 <strong>84 条政策</strong>、<strong>326 家南安市企业</strong>，已完成 <strong>186 次有效匹配分析</strong>。<br><br>
+                匹配结果中：高匹配 <strong>62 组</strong>，中匹配 <strong>91 组</strong>，低匹配 <strong>33 组</strong>。整体看，中匹配占比最高，说明较多政策-企业组合已经接近申报条件，建议优先核验关键指标；高匹配结果可优先查看。
+            `,
+            '哪些政策建议优先查看？': `
+                建议优先查看两类政策：<br><br>
+                <strong>1. 时效紧的政策</strong>：今日快讯显示有 <strong>2 项技改、科技创新奖补政策临近截止</strong>，重点政策中“泉州市高质量发展支持企业技术改造专项”剩余 <strong>30 天</strong>。<br><br>
+                <strong>2. 高匹配数量多的政策</strong>：“南安市高新技术企业培育奖励政策”高匹配 <strong>16 家</strong>，“泉州市高质量发展支持企业技术改造专项”高匹配 <strong>14 家</strong>，“泉州市专精特新中小企业梯度培育计划”高匹配 <strong>9 家</strong>。<br><br>
+                建议查看顺序：临近截止奖补 → 泉州市技改专项 → 南安市高企奖励 → 专精特新梯度培育。
+            `,
+            '高匹配、中匹配、低匹配分别代表什么？': `
+                <strong>高匹配</strong>：匹配度 ≥ 80%，企业与政策条件高度符合，建议优先查看。<br><br>
+                <strong>中匹配</strong>：匹配度 50%—80%，企业符合部分政策条件，建议进一步核验关键指标。<br><br>
+                <strong>低匹配</strong>：匹配度 20%—50%，当前匹配度较低，可作为政策覆盖参考。<br><br>
+                统计口径：<strong>1 家企业 × 1 项政策 = 1 组匹配结果</strong>，本模块仅统计已完成匹配度计算的结果。
+            `,
+            '各节点政策匹配情况如何？': `
+                当前已按企业<strong>所属节点</strong>对政策匹配结果进行分类，主要涉及 <strong>轴承、数控机床、纺织机械</strong> 三类节点。<br><br>
+                <strong>1. 数控机床节点</strong><br>
+                该节点企业与政策匹配度较高，主要集中在 <strong>技术改造、智能制造、设备更新、专精特新</strong> 类政策。原因是数控机床企业通常具备设备投入、工艺升级、自动化改造、研发创新等特征，和当前政策库中的制造业扶持政策关联度较强。<br><br>
+                <strong>2. 轴承节点</strong><br>
+                该节点企业更适合关注 <strong>技改补贴、质量提升、专精特新、工业强基</strong> 类政策。如果企业具备精密加工、检测能力提升、核心零部件研发等基础，可以优先纳入培育清单。<br><br>
+                <strong>3. 纺织机械节点</strong><br>
+                该节点企业更适合关注 <strong>数字化改造、节能降耗、设备更新、产业升级</strong> 类政策。当前匹配机会主要来自生产设备改造、节能技改和智能化产线升级方向。<br><br>
+                <strong>建议：</strong>优先对 <strong style="color:#1890ff;">数控机床节点</strong> 企业开展政策服务，因为该节点与技改、智能制造、专精特新等政策的适配度更高，短期内更容易形成可申报企业清单。
+            `,
+            '匹配结果分析应该优先看哪个维度？': `
+                建议按使用目标切换：<br><br>
+                <strong>1. 想从企业服务出发</strong>：优先选择“按产业节点”，先看每个产业节点主要对应哪些政策类型，以及高匹配企业数量，适合安排批量服务。<br><br>
+                <strong>2. 想从政策兑现出发</strong>：切换到“按政策类型”，先看每类政策覆盖哪些产业节点，适合快速判断某类政策的重点触达对象。<br><br>
+                当前数据看，<strong>轴承节点</strong>在技改类、专精特新和高企培育三个方向的高匹配企业数都更高，可优先形成企业清单。
+            `,
+            '数控机床企业最适合申报哪类政策？': `
+                数控机床企业建议优先关注 <strong style="color:#1890ff;">技术改造类、智能制造类、设备更新类、专精特新类</strong> 政策。<br><br>
+                <strong>1. 与技改政策匹配度高</strong><br>
+                数控机床企业通常涉及生产设备升级、加工精度提升、自动化改造等场景，符合技改类政策对设备投资、产线升级、工艺改造的支持方向。<br><br>
+                <strong>2. 与智能制造政策关联度强</strong><br>
+                如果企业已经建设数控系统、自动化产线、设备联网、数据采集系统或生产管理系统，可进一步匹配智能制造、数字化车间、优秀场景等政策。<br><br>
+                <strong>3. 具备专精特新培育基础</strong><br>
+                数控机床企业往往具有较强的专业化和技术积累，如果企业在细分产品、核心部件、客户订单、专利成果方面有一定基础，可以作为专精特新企业重点培育对象。<br><br>
+                <strong>4. 后续可衔接高企政策</strong><br>
+                如果企业研发费用、科技人员、知识产权和高新技术产品收入逐步达标，可继续冲刺高新技术企业认定。<br><br>
+                <strong>建议路径：</strong>先申报 <strong>技改/设备更新类政策</strong>，再培育 <strong>智能制造和专精特新政策</strong>，最后衔接 <strong>高新技术企业认定</strong>。
+            `,
+            '各节点企业的主要申报短板是什么？': `
+                根据不同节点企业的产业特征，当前主要短板可以分为以下几类：<br><br>
+                <strong>1. 轴承节点企业</strong><br>
+                主要短板集中在：检测能力证明不足、精密加工设备材料不完整、专利软著和研发成果数量偏少、产品质量认证和客户应用证明不够充分。<br>
+                建议园区重点辅导企业补齐设备清单、检测报告、核心产品说明、专利成果和质量认证材料。<br><br>
+                <strong>2. 数控机床节点企业</strong><br>
+                主要短板集中在：技改项目备案材料不完整、设备采购合同和发票归集不足、智能制造系统建设证明不充分、研发费用和科技人员材料归集不规范。<br>
+                建议园区优先协助企业完成技改备案核验、设备投资材料整理、研发费用归集和数字化能力证明梳理。<br><br>
+                <strong>3. 纺织机械节点企业</strong><br>
+                主要短板集中在：数字化改造程度不高、节能降耗成效材料不足、设备更新项目材料不完整、主导产品和市场应用证明不足。<br>
+                建议园区重点辅导企业补充节能改造说明、设备更新凭证、产线升级材料和客户订单证明。<br><br>
+                <strong>总体建议：</strong>不同节点不要使用同一套培育方式。轴承企业重点补强质量和研发材料，数控机床企业重点补强技改和智能制造材料，纺织机械企业重点补强数字化和节能改造材料。
+            `
+        };
+
+        function appendChatMessage(type, content) {
+            const chatBody = document.getElementById('chatBody');
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${type === 'user' ? 'chat-user' : 'chat-ai'}`;
+            bubble.innerHTML = content;
+            chatBody.appendChild(bubble);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            return bubble;
+        }
+
+        function tokenizeHtml(html) {
+            const tokens = [];
+            let i = 0;
+            while (i < html.length) {
+                if (html[i] === '<') {
+                    const end = html.indexOf('>', i);
+                    if (end !== -1) {
+                        tokens.push(html.slice(i, end + 1));
+                        i = end + 1;
+                    } else {
+                        tokens.push(html[i]);
+                        i += 1;
+                    }
+                } else if (html[i] === '&') {
+                    const end = html.indexOf(';', i);
+                    if (end !== -1 && end - i <= 10) {
+                        tokens.push(html.slice(i, end + 1));
+                        i = end + 1;
+                    } else {
+                        tokens.push(html[i]);
+                        i += 1;
+                    }
+                } else {
+                    tokens.push(html[i]);
+                    i += 1;
+                }
+            }
+            return tokens;
+        }
+
+        function streamChatMessage(type, content, speed = 16) {
+            const chatBody = document.getElementById('chatBody');
+            const bubble = document.createElement('div');
+            bubble.className = `chat-bubble ${type === 'user' ? 'chat-user' : 'chat-ai'}`;
+            chatBody.appendChild(bubble);
+
+            const tokens = tokenizeHtml(content);
+            let index = 0;
+            let currentHtml = '';
+
+            const timer = setInterval(() => {
+                const step = tokens[index] && tokens[index].startsWith('<') ? 1 : 2;
+                for (let i = 0; i < step && index < tokens.length; i += 1) {
+                    currentHtml += tokens[index];
+                    index += 1;
+                }
+                bubble.innerHTML = currentHtml + '<span class="typing-cursor">|</span>';
+                chatBody.scrollTop = chatBody.scrollHeight;
+
+                if (index >= tokens.length) {
+                    clearInterval(timer);
+                    bubble.innerHTML = currentHtml;
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }
+            }, speed);
+        }
+
+        function handleQuestion(query) {
+            if (!query) return;
+            appendChatMessage('user', query);
+            const answer = presetResponses[query] || `
+                我可以基于当前页面的覆盖政策数、已服务企业数、累计匹配分析、重点政策和匹配结果分布进行分析。建议优先点击预设问题，快速查看当前匹配概况、优先查看政策和匹配等级说明。
+            `;
+            setTimeout(() => streamChatMessage('ai', answer), 260);
+        }
+
+        document.querySelectorAll('.suggestion-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                handleQuestion(pill.getAttribute('data-query'));
+            });
+        });
+
+        const aiInput = document.getElementById('aiInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const resetChatBtn = document.getElementById('resetChatBtn');
+
+        function sendInputQuestion() {
+            const query = aiInput.value.trim();
+            if (!query) return;
+            aiInput.value = '';
+            sendBtn.classList.remove('active');
+            handleQuestion(query);
+        }
+
+        aiInput.addEventListener('input', () => {
+            sendBtn.classList.toggle('active', aiInput.value.trim().length > 0);
+        });
+        aiInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendInputQuestion();
+        });
+        sendBtn.addEventListener('click', sendInputQuestion);
+
+        resetChatBtn.addEventListener('click', () => {
+            document.getElementById('chatBody').innerHTML = `
+                <div class="chat-bubble chat-ai">
+                    您好！我是您的政策匹配助手，可以基于当前页面数据快速分析：
+                    <div class="ai-suggestions">
+                        <div class="suggestion-pill" data-query="当前政策匹配整体情况如何？">当前政策匹配整体情况如何？</div>
+                        <div class="suggestion-pill" data-query="哪些政策建议优先查看？">哪些政策建议优先查看？</div>
+                        <div class="suggestion-pill" data-query="高匹配、中匹配、低匹配分别代表什么？">高匹配、中匹配、低匹配分别代表什么？</div>
+                    </div>
+                </div>
+            `;
+            document.querySelectorAll('.suggestion-pill').forEach(pill => {
+                pill.addEventListener('click', () => handleQuestion(pill.getAttribute('data-query')));
+            });
+        });
+
+        function generateAISuggestion() {
+            appendChatMessage('user', 'AI 生成工作建议');
+            const fullText = `已根据政策截止时间、匹配度和企业培育状态，生成今日工作建议：<br><br><a href="政策卡片.html?id=tech_reform&noDiagnosis=1" style="font-weight:bold;color:#2563eb;text-decoration:none;cursor:pointer;">【优先推进】泉州市高质量发展支持企业技术改造专项</a><br>该政策剩余 <span style="color:#f5222d; font-weight:bold;">30 天</span> 截止，当前有 <span style="color:#1890ff; font-weight:bold;">14 家</span> 高匹配企业，建议优先触达。<br><span style="font-weight:bold;">💡 建议动作：</span><ol style="padding-left: 20px; margin-top: 4px; margin-bottom: 12px; color:#333;"><li>向 <span style="color:#1890ff; font-weight:bold;">14家</span> 高匹配企业发送政策提醒；</li><li>对 23 家中匹配企业建立培育清单，辅导补齐申报条件。</li></ol><a href="政策卡片.html?id=high_tech&noDiagnosis=1" style="font-weight:bold;color:#2563eb;text-decoration:none;cursor:pointer;">【同步关注】南安市高新技术企业培育奖励政策</a><br>当前高匹配企业 <span style="color:#1890ff; font-weight:bold;">16家</span>，中匹配企业 27 家。<br>建议提前开展<span style="font-weight:bold;">研发费用、知识产权、科技人员占比</span>诊断。`;
+            setTimeout(() => streamChatMessage('ai', fullText, 14), 260);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>园区政策服务平台 - 政策找企业</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+
+        /* ==================== 返回行统一样式 ==================== */
+        .page-breadcrumb { color: #6b7280; font-size: 14px; display: flex; align-items: center; gap: 8px; font-weight: 500; margin-bottom: 4px; }
+        .page-breadcrumb a { color: #2563eb; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .page-breadcrumb a:hover { text-decoration: underline; }
+        .page-breadcrumb .home-link { color: #6b7280; }
+        .page-breadcrumb .home-link:hover { color: #2563eb; }
+        .page-breadcrumb strong { color: #1f2937; font-weight: 700; }
+
+        /* ==================== AI 助手右侧栏：与看板保持一致 ==================== */
+        .ai-sidebar { width: 320px; background-color: #fff; border-left: 1px solid #ebeef5; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; box-shadow: -4px 0 15px rgba(0,0,0,0.02); }
+        .ai-header { padding: 16px; border-bottom: 1px solid #ebeef5; font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .ai-content { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #fafafa; scroll-behavior: smooth; }
+        .chat-bubble { max-width: 90%; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 8px; animation: msgFadeIn 0.3s ease both; }
+        @keyframes msgFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-ai { align-self: flex-start; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #ebeef5; color: #303133; }
+        .chat-user { align-self: flex-end; background: #1890ff; color: #fff; border-radius: 8px 8px 0 8px; }
+        .ai-suggestions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .suggestion-pill { background: #f0f2f5; color: #1890ff; padding: 8px 12px; border-radius: 16px; font-size: 12px; cursor: pointer; width: 100%; border: 1px solid transparent; line-height: 1.4; text-align: left; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .suggestion-pill:hover { background: #e6f7ff; border-color: #1890ff; }
+        .typing-cursor { display:inline-block; margin-left:2px; color:#1890ff; animation: cursorBlink 0.9s infinite; }
+        @keyframes cursorBlink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0; } }
+        .ai-input-area { padding: 16px; border-top: 1px solid #ebeef5; background: #fff; }
+        .input-box-wrapper { position: relative; display: flex; align-items: center; }
+        .input-box { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px 35px 10px 10px; font-size: 13px; outline: none; transition: border-color 0.2s; background: #fff; }
+        .input-box:focus { border-color: #1890ff; }
+        .send-btn { position: absolute; right: 10px; color: #c0c4cc; cursor: pointer; font-size: 16px; transition: color 0.2s; border: none; background: transparent; padding: 0; }
+        .send-btn.active, .send-btn:hover { color: #1890ff; }
+        .clickable { cursor: pointer; }
+
+        /* ==================== 批量推送弹窗 ==================== */
+        .modal-mask { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.42); display: none; align-items: center; justify-content: center; z-index: 999; padding: 24px; }
+        .modal-mask.show { display: flex; }
+        .reminder-modal { width: 620px; max-width: 96vw; background: #fff; border-radius: 12px; box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22); overflow: hidden; animation: modalFadeIn 0.22s ease both; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .reminder-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid #eef2f7; }
+        .reminder-modal-title { font-size: 17px; font-weight: 800; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .modal-close { color: #9ca3af; cursor: pointer; border: none; background: transparent; font-size: 18px; line-height: 1; }
+        .modal-close:hover { color: #4b5563; }
+        .reminder-modal-body { padding: 18px 22px 8px; display: flex; flex-direction: column; gap: 14px; }
+        .modal-section { background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; padding: 12px 14px; }
+        .modal-section-title { font-size: 13px; font-weight: 800; color: #374151; margin-bottom: 8px; }
+        .modal-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: #4b5563; }
+        .modal-info-grid strong { color: #111827; }
+        .company-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .company-chip { background: #fff; border: 1px solid #dbeafe; color: #2563eb; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .channel-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #374151; }
+        .channel-row label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+        .preview-box { background: #fff; border: 1px solid #e5e7eb; color: #4b5563; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.7; }
+        .reminder-modal-footer { padding: 16px 22px 20px; display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-btn { border: none; border-radius: 8px; padding: 9px 16px; font-weight: 800; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .modal-btn-secondary { background: #fff; border: 1px solid #d1d5db; color: #4b5563; }
+        .modal-btn-secondary:hover { background: #f9fafb; }
+        .modal-btn-primary { background: #1890ff; color: #fff; box-shadow: 0 6px 14px rgba(24, 144, 255, 0.18); }
+        .modal-btn-primary:hover { background: #1677d2; }
+        .modal-success { padding: 32px 28px 8px; text-align: center; }
+        .success-icon { width: 54px; height: 54px; border-radius: 50%; background: #f0fdf4; color: #22c55e; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; }
+        .success-title { font-size: 17px; font-weight: 900; color: #111827; margin-bottom: 8px; }
+        .success-desc { font-size: 13px; line-height: 1.7; color: #4b5563; }
+
+
+        /* ==================== 用户菜单与待办任务清单 ==================== */
+        .user-menu-wrap { position: relative; cursor: pointer; }
+        .user-menu-card { position: absolute; right: 0; top: 44px; width: 188px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 14px 34px rgba(15,23,42,.16); padding: 6px; display: none; z-index: 1200; }
+        .user-menu-card.show { display: block; animation: modalFadeIn .18s ease both; }
+        .user-menu-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 10px; border-radius: 8px; color: #374151; font-size: 13px; font-weight: 700; }
+        .user-menu-item:hover { background: #eff6ff; color: #2563eb; }
+        .todo-badge { min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px; background: #ef4444; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; }
+        .task-list-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; color:#64748b; font-size:12px; }
+        .task-filter-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+        .task-filter-tab { border:1px solid #dbeafe; background:#fff; color:#2563eb; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:800; cursor:pointer; }
+        .task-filter-tab.active { background:#2563eb; color:#fff; }
+        .task-state { display:inline-flex; align-items:center; justify-content:center; min-width:58px; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:900; white-space:nowrap; }
+        .task-state.doing { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+        .task-state.done { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+        .task-state.overdue { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+        .task-empty { text-align:center; padding:38px 12px; color:#94a3b8; font-size:13px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px; }
+        .task-finish-btn { border:1px solid #bfdbfe; background:#eff6ff; color:#2563eb; border-radius:6px; padding:5px 8px; font-weight:800; cursor:pointer; }
+        .task-finish-btn:hover { background:#dbeafe; }
+        .task-finish-btn.done { border-color:#bbf7d0; background:#f0fdf4; color:#16a34a; }
+
+
+
+        /* ==================== 高匹配企业 ==================== */
+        .hm-panel { background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 2px 12px rgba(15,23,42,.04); overflow:hidden; }
+        .hm-head { padding:14px 16px; border-bottom:1px solid #eef2f7; display:flex; align-items:center; justify-content:space-between; gap:12px; background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%); }
+        .hm-title { display:flex; align-items:center; gap:10px; font-weight:900; color:#111827; font-size:16px; }
+        .hm-title-badge { background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0; padding:3px 8px; border-radius:999px; font-size:12px; font-weight:800; }
+        .hm-tabs { padding:10px 16px 0; display:flex; align-items:center; gap:8px; border-bottom:1px solid #eef2f7; background:#fff; }
+        .hm-tab { border:none; background:transparent; color:#64748b; padding:9px 14px; font-weight:900; cursor:pointer; border-bottom:3px solid transparent; font-size:13px; }
+        .hm-tab span { font-size:11px; font-weight:700; margin-left:4px; }
+        .hm-tab.active.green { color:#16a34a; border-bottom-color:#22c55e; }
+        .hm-tab.active.orange { color:#ea580c; border-bottom-color:#f97316; }
+        .hm-tab.active.purple { color:#7e22ce; border-bottom-color:#8b5cf6; }
+        .hm-tab:hover { background:#f8fafc; }
+                .hm-toolbar { padding:10px 16px; border-bottom:1px solid #eef2f7; display:flex; justify-content:space-between; align-items:center; gap:10px; background:#fff; }
+        .hm-toolbar-left { display:flex; align-items:center; gap:8px; color:#4b5563; font-size:13px; }
+        .hm-toolbar-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .hm-btn { border:1px solid #dbeafe; background:#fff; color:#2563eb; border-radius:7px; padding:7px 10px; font-weight:800; font-size:12px; cursor:pointer; transition:all .2s; }
+        .hm-btn:hover { background:#eff6ff; border-color:#93c5fd; }
+        .hm-btn.primary { background:#2563eb; border-color:#2563eb; color:#fff; box-shadow:0 6px 14px rgba(37,99,235,.15); }
+        .hm-btn.primary:hover { background:#1d4ed8; }
+        .hm-btn.success { background:#16a34a; border-color:#16a34a; color:#fff; box-shadow:0 6px 14px rgba(22,163,74,.15); }
+        .hm-btn:disabled { opacity:.45; cursor:not-allowed; box-shadow:none; }
+        .hm-scroll { overflow-x:hidden; }
+        .hm-table { width:100%; min-width:0; border-collapse:collapse; table-layout:fixed; font-size:12px; }
+        .hm-table th { background:#f8fafc; color:#64748b; font-weight:800; border-bottom:1px solid #e5e7eb; padding:10px 8px; text-align:left; white-space:nowrap; }
+        .hm-table td { border-bottom:1px solid #f1f5f9; padding:10px 8px; vertical-align:top; color:#334155; }
+        .hm-table tr:hover td { background:#f8fbff; }
+        .hm-table th:nth-child(1), .hm-table td:nth-child(1) { width:3%; text-align:center; }
+        .hm-table th:nth-child(2), .hm-table td:nth-child(2) { width:14%; }
+        .hm-table th:nth-child(3), .hm-table td:nth-child(3) { width:6%; text-align:center; }
+        .hm-table th:nth-child(4), .hm-table td:nth-child(4) { width:14%; text-align:left; }
+        .hm-table th:nth-child(5), .hm-table td:nth-child(5) { width:13%; text-align:left; }
+        .hm-table th:nth-child(6), .hm-table td:nth-child(6) { width:12%; }
+        .hm-table th:nth-child(7), .hm-table td:nth-child(7) { width:12%; }
+        .hm-table th:nth-child(8), .hm-table td:nth-child(8) { width:9%; text-align:center; }
+        .hm-table th:nth-child(9), .hm-table td:nth-child(9) { width:9%; text-align:center; }
+        .hm-table th:nth-child(10), .hm-table td:nth-child(10) { width:8%; text-align:center; }
+
+        .company-link { color:#1f2937; text-decoration:none; cursor:pointer; transition:all .2s; }
+        .company-link:hover { color:#2563eb; text-decoration:underline; }
+
+        .hm-company { font-weight:900; color:#1f2937; line-height:1.4; }
+        .hm-match { font-weight:900; color:#16a34a; font-size:15px; }
+        .hm-tag-wrap { position:relative; min-height:24px; }
+        .hm-list { margin:0; padding-left:16px; display:flex; flex-direction:column; gap:4px; }
+        .hm-tag { display:list-item; list-style:disc; line-height:1.35; font-weight:700; max-width:100%; background:transparent !important; border:none !important; padding:0 !important; border-radius:0 !important; }
+        .hm-tag span { display:inline-block; max-width:4.5em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+        .hm-tag.park { color:#2563eb; }
+        .hm-tag.company { color:#ea580c; }
+        .hm-tag button { border:none; background:transparent; padding:0 0 0 3px; cursor:pointer; color:inherit; opacity:.55; font-size:10px; }
+        .hm-tag button:hover { opacity:1; }
+        .hm-add-row { list-style:none; margin-left:-14px; }
+        .hm-add { width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; border:1px dashed #93c5fd; color:#2563eb; background:#fff; border-radius:5px; cursor:pointer; font-weight:900; }
+        .hm-add:hover { background:#eff6ff; }
+        .hm-add-panel { position:absolute; z-index:80; top:26px; left:0; width:210px; background:#fff; border:1px solid #dbeafe; border-radius:8px; box-shadow:0 12px 28px rgba(15,23,42,.16); padding:8px; display:none; }
+        .hm-add-panel.show { display:block; }
+        .hm-add-panel .opt { padding:6px 8px; cursor:pointer; border-radius:5px; color:#374151; font-size:12px; }
+        .hm-add-panel .opt:hover { background:#eff6ff; color:#2563eb; }
+        .hm-custom-row { display:flex; gap:5px; margin-top:6px; border-top:1px solid #eef2f7; padding-top:6px; }
+        .hm-custom-row input { min-width:0; flex:1; border:1px solid #d1d5db; border-radius:5px; padding:5px 6px; font-size:12px; outline:none; }
+        .hm-custom-row button { border:none; background:#2563eb; color:#fff; border-radius:5px; padding:5px 7px; cursor:pointer; font-size:12px; }
+        .hm-cond-list { display:flex; flex-direction:column; gap:5px; line-height:1.35; }
+        .hm-cond-item { display:flex; align-items:flex-start; gap:5px; color:#334155; }
+        .hm-cond-item i { margin-top:2px; font-size:11px; flex-shrink:0; }
+        .hm-cond-ok i { color:#22c55e; }
+        .hm-cond-miss i { color:#9ca3af; font-size:6px; margin-top:6px; }
+        .hm-status { display:inline-flex; align-items:center; justify-content:center; min-width:72px; padding:4px 7px; border-radius:999px; font-weight:900; font-size:11px; white-space:nowrap; }
+        .hm-status.pending-task { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+        .hm-status.park-doing { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+        .hm-status.company-wait { background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; }
+        .hm-status.done { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+        .hm-detail-link { color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:5px 8px; font-weight:800; cursor:pointer; }
+        .hm-modal { width:860px; max-width:96vw; background:#fff; border-radius:12px; box-shadow:0 18px 48px rgba(15,23,42,.24); overflow:hidden; animation:modalFadeIn .22s ease both; }
+        .hm-modal.wide { width:980px; }
+        .hm-modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #eef2f7; }
+        .hm-modal-title { font-size:16px; font-weight:900; color:#111827; display:flex; align-items:center; gap:8px; }
+        .hm-modal-body { padding:16px 20px; max-height:68vh; overflow:auto; }
+        .hm-modal-footer { padding:14px 20px 18px; border-top:1px solid #eef2f7; display:flex; justify-content:flex-end; gap:10px; }
+        .hm-task-table { width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
+        .hm-task-table th { background:#f8fafc; color:#64748b; padding:9px 8px; border:1px solid #e5e7eb; text-align:left; }
+        .hm-task-table td { padding:8px; border:1px solid #e5e7eb; vertical-align:top; }
+        .hm-task-table input, .hm-task-table textarea, .hm-task-table select { width:100%; border:1px solid #d1d5db; border-radius:6px; padding:6px 7px; font-size:12px; outline:none; background:#fff; }
+        .hm-task-table textarea { min-height:72px; resize:vertical; }
+        .hm-task-actions button { color:#2563eb; border:none; background:transparent; cursor:pointer; font-weight:800; margin-right:8px; }
+        .hm-summary { color:#64748b; font-size:12px; margin-bottom:10px; }
+        .detail-status-list { display:flex; flex-direction:column; gap:8px; }
+        .detail-status-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 10px; border:1px solid #bfdbfe; border-radius:7px; background:#fff; color:#2563eb; font-weight:800; }
+        .detail-status-item.company { border-color:#fed7aa; color:#ea580c; }
+        .detail-status-item.done { background:#f0fdf4; border-color:#bbf7d0; color:#16a34a; }
+        .detail-status-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .detail-status-check { flex-shrink:0; display:inline-flex; align-items:center; gap:5px; color:#64748b; font-size:12px; font-weight:800; cursor:pointer; }
+        .detail-status-check input { width:14px; height:14px; accent-color:#2563eb; cursor:pointer; }
+
+    
+/* ==================== 新版高匹配企业看板样式覆盖 ==================== */
+.hm-tabs { padding:14px 24px 0; gap:32px; }
+.hm-tab {font-size:16px;padding:0 0 12px;}
+.hm-tab.active.green {color:#2563eb;border-bottom-color:#2563eb;}
+.hm-table {min-width:900px;font-size:13px;}
+.hm-table th,.hm-table td {padding:12px 10px;}
+.hm-table th:nth-child(1),.hm-table td:nth-child(1){width:4%;text-align:center;}
+.hm-table th:nth-child(2),.hm-table td:nth-child(2){width:28%;}
+.hm-table th:nth-child(3),.hm-table td:nth-child(3){width:10%;text-align:center;}
+.hm-table th:nth-child(4),.hm-table td:nth-child(4){width:24%;}
+.hm-table th:nth-child(5),.hm-table td:nth-child(5){width:24%;}
+.hm-table th:nth-child(6),.hm-table td:nth-child(6){width:10%;text-align:center;}
+.hm-list{padding-left:0;display:flex;flex-wrap:wrap;gap:8px;list-style:none;}
+.hm-tag{display:inline-flex!important;padding:4px 10px!important;border-radius:6px!important;}
+.hm-tag.park{background:#fff!important;color:#2563eb;border:1px solid #bfdbfe!important;}
+.hm-tag.company{background:#fff!important;color:#ea580c;border:1px solid #fed7aa!important;}
+
+
+.ai-loading-mask{position:fixed;inset:0;background:rgba(15,23,42,.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:99999;color:#fff}
+.ai-loading-mask.show{display:flex}
+.ai-loader{width:80px;height:80px;border-radius:50%;background:conic-gradient(#00f2fe 0%,#4facfe 40%,transparent 70%);animation:rotate 1s linear infinite;position:relative;margin-bottom:24px}
+.ai-loader:before{content:"";position:absolute;inset:6px;background:#0f172a;border-radius:50%}
+.ai-loader:after{content:"🤖";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px}
+@keyframes rotate{to{transform:rotate(360deg)}}
+.ai-progress-bar{width:320px;height:6px;background:rgba(255,255,255,.1);border-radius:999px;overflow:hidden;margin-bottom:12px}
+.ai-progress-inner{width:0;height:100%;background:linear-gradient(90deg,#4facfe,#00f2fe);transition:width .1s}
+.ai-loading-status{font-size:15px;font-weight:bold;color:#38bdf8}
+
+.ai-task-card .ai-close{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:none;color:#60a5fa;font-size:20px;cursor:pointer}.ai-task-card .add{border:1px dashed #93c5fd!important;color:#2563eb!important}.ai-task-card .orange{color:#ea580c!important}
+.ai-task-card{background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:8px 14px;display:flex;gap:16px;align-items:stretch;position:relative;margin:2px 0 8px;box-shadow:0 1px 2px rgba(37,99,235,.04)}
+.ai-task-card .label{font-size:12px;font-weight:800;color:#1e40af;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.ai-task-card .tag{display:inline-block;background:#fff;border:1px solid #bfdbfe;color:#2563eb;border-radius:6px;padding:4px 10px;margin:3px;font-size:12px;font-weight:700}
+.ai-task-card .material{color:#ea580c;border-color:#fed7aa}
+.ai-badge{position:absolute;top:-10px;left:-8px;background:linear-gradient(90deg,#2563eb,#06b6d4);color:white;font-size:10px;padding:3px 8px;border-radius:999px;font-weight:700}
+.ai-task-card .hm-tag-wrap{position:relative;min-height:26px}
+.ai-task-card .hm-list{margin:0;padding:0;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:7px;list-style:none}
+.ai-task-card .hm-tag{display:inline-flex!important;align-items:center;gap:6px;list-style:none!important;background:#fff!important;border:1px solid #bfdbfe!important;border-radius:6px!important;color:#2563eb!important;padding:6px 11px!important;line-height:1;font-size:12px;font-weight:800;max-width:none}
+.ai-task-card .hm-tag.company{border-color:#fed7aa!important;color:#ea580c!important}
+.ai-task-card .hm-tag span{display:inline;max-width:none;overflow:visible;text-overflow:clip;white-space:nowrap}
+.ai-task-card .hm-tag button{border:none;background:transparent;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0;opacity:.62}
+.ai-task-card .hm-tag button:hover{opacity:1;color:#ef4444}
+.ai-task-card .hm-add-row{display:inline-flex;list-style:none;margin:0}
+.ai-task-card .hm-add{width:28px;height:28px;border:1px dashed #93c5fd;border-radius:6px;color:#2563eb;background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:900}
+.ai-task-card .hm-add:hover{background:#eff6ff;border-color:#60a5fa}
+.ai-task-card .hm-add-panel{top:34px}
+
+/* ==================== AI助手统一为首页工作台样式 ==================== */
+.ai-sidebar,.ai-chat-panel{
+    border-radius:18px !important;
+    border:1px solid rgba(226,234,246,.92) !important;
+    box-shadow:0 12px 30px rgba(31,89,171,.08) !important;
+    overflow:hidden;
+}
+.ai-header{
+    padding:14px 16px !important;
+    background:linear-gradient(135deg,#f7fbff 0%,#eef6ff 100%) !important;
+    border-bottom:1px solid #e3edf8 !important;
+}
+.ai-content{
+    background:linear-gradient(180deg,#fbfdff 0%,#f7faff 100%) !important;
+    padding:14px !important;
+    gap:14px !important;
+}
+.chat-bubble{border-radius:14px !important;font-size:13px !important;}
+.chat-ai{
+    border-color:#e3edf8 !important;
+    box-shadow:0 6px 16px rgba(31,89,171,.06) !important;
+}
+.chat-user{
+    background:linear-gradient(135deg,#1677ff,#22a7ff) !important;
+}
+.suggestion-pill{
+    border-radius:12px !important;
+    background:#f3f8ff !important;
+    border:1px solid #e3edf8 !important;
+    color:#0f6edb !important;
+}
+.suggestion-pill:hover{background:#e8f3ff !important;}
+.ai-input-area{background:#fff !important;padding:12px 16px !important;}
+.input-box{
+    border-radius:12px !important;
+    background:#fbfdff !important;
+    border-color:#d8e6f6 !important;
+}
+
+/* 企业确认事项紧凑布局 */
+.ai-task-card .confirm-area{display:flex;gap:8px;align-items:flex-start;font-size:11px}
+.ai-task-card .confirm-area>div{flex:1;min-width:0}
+.ai-task-card .confirm-area .hm-cond-list{display:flex;flex-direction:column;gap:3px}
+.ai-task-card .confirm-area .hm-cond-item span{line-height:1.25}
+.ai-task-card .confirm-area .hm-cond-item{font-size:12px}
+.ai-task-card .material-area .hm-list{gap:5px}
+.template-preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+.template-preview-table th,.template-preview-table td{border:1px solid #e5e7eb;padding:8px;text-align:left}
+.template-preview-table th{background:#f8fafc;color:#64748b}
+.track-list{display:flex;flex-direction:column;gap:12px}
+.track-item{border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fff;display:grid;grid-template-columns:180px 1fr 160px;align-items:center;gap:16px}
+.track-status{display:inline-flex;padding:4px 10px;border-radius:999px;background:#eff6ff;color:#2563eb;font-weight:800;font-size:12px}
+</style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden text-gray-800 text-sm">
+
+    
+<div class="ai-loading-mask" id="aiLoadingMask">
+    <div class="ai-loader"></div>
+    <div class="text-xl font-bold mb-2">AI 正在生成服务任务...</div>
+    <div class="ai-progress-bar"><div class="ai-progress-inner" id="aiProgressInner"></div></div>
+    <div class="ai-loading-status" id="aiLoadingStatus">正在分析企业匹配条件...</div>
+</div>
+
+<header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+        <div class="flex items-center gap-6">
+            <span class="text-lg font-bold text-gray-800 tracking-wide">泉州市南安市政策匹配平台</span>
+            <span class="text-xs text-gray-400 hidden sm:inline">智能匹配政策与企业，精准发现可申报企业，提升政策转化效果</span>
+        </div>
+        <div class="flex items-center gap-4 text-gray-600">
+            <span class="text-xs">2026-07-01 <i class="fa-regular fa-calendar ml-1"></i></span>
+            <i class="fa-regular fa-bell cursor-pointer hover:text-blue-600 relative">
+                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </i>
+            <div class="user-menu-wrap" id="userMenuTrigger">
+                <div class="flex items-center gap-2">
+                    <img src="https://i.pravatar.cc/150?img=11" alt="Avatar" class="w-8 h-8 rounded-full">
+                    <div class="flex flex-col text-xs leading-tight">
+                        <span class="font-medium">林晓明 <i class="fa-solid fa-angle-down text-gray-400 ml-1"></i></span>
+                        <span class="text-gray-400 scale-90 -ml-1">园区管理员</span>
+                    </div>
+                </div>
+                <div class="user-menu-card" id="userMenuCard">
+                    <div class="user-menu-item" id="openTodoTasksBtn">
+                        <span><i class="fa-solid fa-list-check mr-2 text-blue-500"></i>待办任务</span>
+                        <span class="todo-badge" id="todoTaskBadge">0</span>
+                    </div>
+                    <div class="user-menu-item" id="openEnterpriseTrackBtn">
+                        <span><i class="fa-solid fa-building mr-2 text-blue-500"></i>企业跟踪</span>
+                    </div>
+                    <div class="user-menu-item">
+                        <span><i class="fa-regular fa-bell mr-2 text-orange-400"></i>消息通知</span>
+                    </div>
+                    <div class="user-menu-item">
+                        <span><i class="fa-regular fa-user mr-2 text-gray-400"></i>个人中心</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+    <main class="flex-1 flex flex-col overflow-hidden relative min-w-0">
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            <div class="page-breadcrumb">
+                <a href="首页.html"><i class="fa-solid fa-arrow-left"></i> 返回首页</a>
+                <a href="首页.html" class="home-link">⌂</a>
+                <span>›</span>
+                <span>政策找企业</span>
+                <span>›</span>
+                <strong id="breadcrumb-current-policy">泉州市高质量发展支持企业技术改造专项</strong>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-5 flex flex-col gap-5" id="policy-header-card">
+                <div class="flex justify-between items-start">
+                    <div class="flex gap-4 items-start">
+                        <div id="policy-icon" class="w-12 h-12 bg-green-500 text-white rounded-lg flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
+                            <i class="fa-solid fa-wrench"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1.5 flex-wrap" id="policy-title-row">
+                                <h2 id="policy-title" class="text-lg font-bold text-gray-800">泉州市高质量发展支持企业技术改造专项</h2>
+                                <a id="policy-original-link" href="#" target="_blank" title="查看政策原文" class="text-blue-500 hover:text-blue-700 text-sm"><i class="fa-solid fa-link"></i></a>
+                            </div>
+                            <div class="text-gray-500 text-xs" id="policy-deadline">
+                                剩余申报时间：<span class="text-red-500 font-bold text-sm">30天</span> (2026-07-31 截止)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-6 text-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100" id="policy-stats">
+                        <div>
+                            <div class="text-gray-500 text-xs mb-1">匹配企业总数</div>
+                            <div class="text-xl font-bold text-blue-600"><span id="stat-total">56</span> <span class="text-xs font-normal text-gray-500">家</span></div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-xs mb-1">高匹配</div>
+                            <div class="text-xl font-bold text-green-500"><span id="stat-high">18</span> <span class="text-xs font-normal text-gray-500">家</span></div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-xs mb-1">中匹配</div>
+                            <div class="text-xl font-bold text-orange-400"><span id="stat-mid">32</span> <span class="text-xs font-normal text-gray-500">家</span></div>
+                        </div>
+                        <div>
+                            <div class="text-gray-500 text-xs mb-1">低匹配</div>
+                            <div class="text-xl font-bold text-gray-800"><span id="stat-low">6</span> <span class="text-xs font-normal text-gray-500">家</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 bg-gray-50/50 p-4 rounded-lg border border-gray-100" id="policy-meta-grid">
+                    <div>
+                        <span class="text-gray-400 text-xs block mb-1">发文文号</span>
+                        <span class="font-medium text-gray-800" id="meta-doc-number">—</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-xs block mb-1">发布单位</span>
+                        <span class="font-medium text-gray-800" id="meta-issuer">—</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-xs block mb-1">发布时间</span>
+                        <span class="font-medium text-gray-800" id="meta-publish-date">—</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-xs block mb-1">申报截止时间</span>
+                        <span class="font-medium text-gray-800" id="meta-apply-deadline">—</span>
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/40 p-4 rounded-lg border border-blue-100/60" id="policy-support">
+                    <div class="font-bold text-blue-800 mb-2 flex items-center gap-1.5 text-sm">
+                        <i class="fa-solid fa-hand-holding-dollar"></i> 支持方式
+                    </div>
+                    <p class="text-gray-700 leading-relaxed text-sm" id="support-content"></p>
+                </div>
+            </div>
+
+
+            <div class="hm-panel" id="highMatchPanel">
+                    
+                    <div class="hm-tabs" id="hmTabs">
+                        <button class="hm-tab active green" data-type="high">高匹配企业 <span>≥80% | 14家</span></button>
+                        <button class="hm-tab orange" data-type="mid">中匹配企业 <span>50%~80% | 23家</span></button>
+                        <button class="hm-tab purple" data-type="low">低匹配企业 <span>20%~50% | 5家</span></button>
+                    </div>
+
+                    <div class="hm-toolbar">
+                        <div class="hm-toolbar-left">
+                            <label class="inline-flex items-center gap-2 cursor-pointer"><input type="checkbox" id="hmSelectAll" class="accent-blue-600 rounded"> 全选</label>
+                            <span id="hmSelectedText">已选择 0 家企业</span>
+                        </div>
+                        <div class="hm-toolbar-right">
+                            <button class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-md flex items-center gap-1.5 transition duration-200 border-none cursor-pointer" id="aiBatchGenerateBtn">
+                                <i class="fa-solid fa-brain animate-pulse"></i> AI生成服务任务
+                            </button>
+                            <button class="hm-btn success" id="hmSendReminderBtn" disabled><i class="fa-regular fa-paper-plane mr-1"></i>发送企业提醒</button>
+                            <button class="hm-btn" id="hmExportBtn"><i class="fa-solid fa-download mr-1"></i>导出表格</button>
+                        </div>
+                    </div>
+
+                    <!-- 列表区域：维持6列，新增内嵌子行承载AI标签 -->
+                    <div class="hm-scroll">
+                        <table class="hm-table" id="hmTable">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>企业名称</th>
+                                    <th style="text-align: center;">匹配度</th>
+                                    <th>已满足条件</th>
+                                    <th>待确认条件</th>
+                                    <th style="text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hmTbody">
+                                <!-- 动态内容生成 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-5" id="policy-conditions">
+                <div class="font-bold text-gray-800 mb-3 flex items-center gap-1.5 text-sm border-l-4 border-blue-600 pl-2">
+                    申报条件
+                </div>
+                <div class="overflow-hidden border border-gray-200 rounded-lg">
+                    <table class="min-w-full text-left text-xs text-gray-700">
+                        <thead class="bg-gray-50 text-gray-500 font-medium border-b border-gray-200">
+                            <tr>
+                                <th class="px-4 py-2.5 w-1/5">指标名称</th>
+                                <th class="px-4 py-2.5">指标值</th>
+                                <th class="px-4 py-2.5 w-24 text-center">必要指标</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100" id="conditions-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+
+
+        </div>
+    </main>
+
+    <aside class="ai-sidebar">
+        <div class="ai-header">
+            <div style="display:flex; align-items:center; gap:8px; color:#1890ff;">🤖 AI 助手</div>
+            <div style="color:#909399; font-weight:normal;" class="clickable" id="resetChatBtn">🔄 清空</div>
+        </div>
+        
+        <div class="ai-content" id="chatBody">
+            <div class="chat-bubble chat-ai">
+                您好！我是您的政策匹配助手，可以基于当前政策页面快速分析：
+                <div class="ai-suggestions">
+                    <div class="suggestion-pill" data-query="这项政策当前匹配情况如何？">这项政策当前匹配情况如何？</div>
+                    <div class="suggestion-pill" data-query="哪些企业建议优先查看？">哪些企业建议优先查看？</div>
+                    <div class="suggestion-pill" data-query="解释匹配度的计算方法">解释匹配度的计算方法</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-input-area">
+            <div class="input-box-wrapper">
+                <input type="text" id="aiInput" class="input-box" placeholder="请输入您的问题（支持回车）...">
+                <span id="sendBtn" class="send-btn">➤</span>
+            </div>
+            <div style="font-size:12px; color:#c0c4cc; text-align:center; margin-top:8px;">内容由AI生成，仅供参考</div>
+        </div>
+    </aside>
+    </div>
+
+
+    <div class="modal-mask" id="pushReminderModal">
+        <div class="reminder-modal" role="dialog" aria-modal="true" aria-labelledby="pushReminderTitle">
+            <div id="pushReminderConfirmView">
+                <div class="reminder-modal-header">
+                    <div class="reminder-modal-title" id="pushReminderTitle"><i class="fa-regular fa-paper-plane text-blue-500"></i> 推送申报提醒确认</div>
+                    <button class="modal-close" type="button" id="closePushModal">×</button>
+                </div>
+                <div class="reminder-modal-body">
+                    <div class="modal-section">
+                        <div class="modal-section-title">1. 政策基础信息</div>
+                        <div class="modal-info-grid">
+                            <div>政策：<strong>泉州市高质量发展支持企业技术改造专项</strong></div>
+                            <div>申报截止：<strong style="color:#f5222d;">2026-07-31</strong></div>
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <div class="modal-section-title" id="selectedCompanyTitle">2. 待推送企业清单（本次选中 6 家）</div>
+                        <div class="company-list" id="selectedCompanyList"></div>
+                    </div>
+                    <div class="modal-section">
+                        <div class="modal-section-title">3. 推送渠道（默认全选）</div>
+                        <div class="channel-row">
+                            <label><input type="checkbox" checked> 短信通知</label>
+                            <label><input type="checkbox" checked> 平台站内消息</label>
+                            <label><input type="checkbox" checked> 微信推送</label>
+                        </div>
+                    </div>
+                    <div class="modal-section">
+                        <div class="modal-section-title">4. 通知预览（统一模板，自动替换企业名称）</div>
+                        <div class="preview-box">
+                            您好！根据南安市政策服务系统研判，【企业名称】有机会参与《泉州市高质量发展支持企业技术改造专项》的申报。申报将于 2026 年 07 月 31 日截止，请尽快登录平台核对并准备申报材料，申报入口：gxj.quanzhou.gov.cn
+                        </div>
+                    </div>
+                </div>
+                <div class="reminder-modal-footer">
+                    <button class="modal-btn modal-btn-secondary" type="button" id="cancelPushModal">取消</button>
+                    <button class="modal-btn modal-btn-primary" type="button" id="confirmPushModal">确认批量推送</button>
+                </div>
+            </div>
+            <div id="pushReminderSuccessView" style="display:none;">
+                <div class="modal-success">
+                    <div class="success-icon">✓</div>
+                    <div class="success-title">批量推送任务已下发</div>
+                    <div class="success-desc" id="pushSuccessText">共 6 家企业，消息将陆续送达，推送记录可在后台消息管理页查看。</div>
+                </div>
+                <div class="reminder-modal-footer" style="justify-content:center;">
+                    <button class="modal-btn modal-btn-primary" type="button" id="finishPushModal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const POLICY_CONFIG = {
+            tech_reform: {
+                title: '泉州市高质量发展支持企业技术改造专项',
+                originalUrl: 'https://gxj.quanzhou.gov.cn/',
+                icon: 'fa-wrench',
+                iconBg: 'bg-green-500',
+                tags: ['市级', '技改类', '资金补贴'],
+                daysLeft: 30,
+                deadline: '2026-07-31',
+                deadlineClass: 'text-red-500',
+                total: 42, high: 14, mid: 23, low: 5,
+                columnCounts: { high: 14, mid: 23, low: 5 },
+                docNumber: '泉工信投资〔2025〕115号',
+                issuer: '泉州市工业和信息化局、泉州市财政局',
+                publishDate: '2025年7月4日',
+                applyDeadline: '2026年7月31日',
+                supportMethod: '对实施技术改造的工业企业，按项目建设期内实际购置设备投资额（含技术、软件等）的 <span class="text-red-500 font-bold">不高于10%</span> 给予补助，单个项目最高不超过 <span class="text-red-500 font-bold">500万元</span>；符合工业龙头或“亩均论英雄”A类条件的项目，最高可按政策口径提高至 <span class="text-red-500 font-bold">1000万元</span>。',
+                conditions: [
+                    { name: '所在地区', value: '泉州市范围内注册登记且项目落地南安市的工业企业', required: true },
+                    { name: '主体类型', value: '依法登记注册的制造业企业', required: true },
+                    { name: '经营资格', value: '依法生产经营，无重大违法违规记录', required: true },
+                    { name: '项目状态', value: '项目已完成备案或核准，并纳入技改投资统计', required: true },
+                    { name: '设备投资', value: '设备（含技术、软件）投资额不低于300万元', required: true },
+                    { name: '材料要求', value: '设备清单、合同、发票、支付凭证等材料完整', required: true },
+                    { name: '行业方向', value: '重点支持食品加工、智能装备、新材料、电子信息等主导产业', required: false }
+                ]
+            },
+            specialty: {
+                title: '泉州市专精特新中小企业梯度培育计划',
+                icon: 'fa-graduation-cap',
+                iconBg: 'bg-blue-400',
+                tags: ['省级', '培育类'],
+                daysLeft: 76,
+                deadline: '2026-09-15',
+                deadlineClass: 'text-orange-500',
+                total: 31, high: 9, mid: 18, low: 4,
+                columnCounts: { high: 9, mid: 18, low: 4 },
+                docNumber: '闽工信规〔2024〕3号',
+                issuer: '福建省工业和信息化厅、泉州市工业和信息化局',
+                publishDate: '2025年9月24日',
+                applyDeadline: '2026年9月15日',
+                supportMethod: '围绕创新型中小企业、专精特新中小企业和专精特新“小巨人”开展梯度培育，对符合条件企业纳入培育库，优先推荐申报省级、国家级称号，并配套开展研发、人才、融资、技术创新等服务。',
+                conditions: [
+                    { name: '所在地区', value: '福建省内注册登记、南安市重点跟踪服务的中小企业', required: true },
+                    { name: '主体类型', value: '中小企业（含中型、小型、微型）', required: true },
+                    { name: '经营年限', value: '从事特定细分市场3年以上', required: true },
+                    { name: '营收规模', value: '上年度营业收入1000万元以上，成长性良好', required: true },
+                    { name: '研发投入', value: '近2年研发费用占营收比重不低于3%', required: true },
+                    { name: '专业化程度', value: '主导产品在省内或细分市场具有稳定客户和竞争优势', required: true },
+                    { name: '创新能力', value: '拥有与主营业务相关的有效发明专利2项以上', required: false }
+                ]
+            },
+            high_tech: {
+                title: '南安市高新技术企业培育奖励政策',
+                icon: 'fa-star',
+                iconBg: 'bg-purple-500',
+                tags: ['区级', '奖励类'],
+                daysLeft: 106,
+                deadline: '2026-10-15',
+                deadlineClass: 'text-gray-500',
+                total: 48, high: 16, mid: 27, low: 5,
+                columnCounts: { high: 16, mid: 27, low: 5 },
+                docNumber: '南政〔2020〕125号',
+                issuer: '泉州市南安市工业和信息化局、泉州市南安市财政局',
+                publishDate: '2022年9月6日',
+                applyDeadline: '2026年10月15日',
+                supportMethod: '对首次认定为国家高新技术企业的企业，在享受市级政策基础上给予区级配套奖励；对重新认定企业按政策口径给予补足奖励，并可叠加研发费用归集、高企贷款贴息等培育服务。',
+                conditions: [
+                    { name: '注册时间', value: '企业注册成立一年以上', required: true },
+                    { name: '知识产权', value: '拥有核心自主知识产权', required: true },
+                    { name: '技术领域', value: '属于《国家重点支持的高新技术领域》范围', required: true },
+                    { name: '科技人员占比', value: '科技人员占企业当年职工总数的比例不低于10%', required: true },
+                    { name: '研发费用占比', value: '近3年研发费用占销售收入比例符合规定要求', required: true },
+                    { name: '高新技术产品收入', value: '高新技术产品（服务）收入占企业总收入60%以上', required: true },
+                    { name: '创新能力评价', value: '企业创新能力评价得分达到70分以上', required: true }
+                ]
+            }
+        };
+
+        function renderConditions(conditions) {
+            const tbody = document.getElementById('conditions-tbody');
+            tbody.innerHTML = conditions.map(item => {
+                const badge = item.required
+                    ? '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px]">是</span>'
+                    : '<span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px]">否</span>';
+                return `<tr class="hover:bg-gray-50/50">
+                    <td class="px-4 py-2.5 font-medium">${item.name}</td>
+                    <td class="px-4 py-2.5 text-gray-600">${item.value}</td>
+                    <td class="px-4 py-2.5 text-center">${badge}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const policyId = params.get('id') || 'tech_reform';
+            const hideDiagnosis = params.get('noDiagnosis') === '1';
+            const policy = POLICY_CONFIG[policyId] || POLICY_CONFIG.tech_reform;
+
+            // 渲染政策头部信息
+            document.getElementById('policy-title').textContent = policy.title;
+            const originalLink = document.getElementById('policy-original-link');
+            if(originalLink) originalLink.href = policy.originalUrl || '#';
+            const breadcrumbCurrentPolicy = document.getElementById('breadcrumb-current-policy');
+            if (breadcrumbCurrentPolicy) breadcrumbCurrentPolicy.textContent = policy.title;
+            const iconEl = document.getElementById('policy-icon');
+            iconEl.className = `w-12 h-12 ${policy.iconBg} text-white rounded-lg flex items-center justify-center text-2xl shadow-sm`;
+            iconEl.innerHTML = `<i class="fa-solid ${policy.icon}"></i>`;
+
+            const titleRow = document.getElementById('policy-title-row');
+            titleRow.querySelectorAll('.policy-tag').forEach(el => el.remove());
+            policy.tags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = 'policy-tag bg-green-50 text-green-600 border border-green-200 text-xs px-2 py-0.5 rounded';
+                span.textContent = tag;
+                titleRow.appendChild(span);
+            });
+
+            document.getElementById('policy-deadline').innerHTML =
+                `剩余申报时间：<span class="${policy.deadlineClass} font-bold text-sm">${policy.daysLeft}天</span> (${policy.deadline} 截止)`;
+            document.getElementById('stat-total').textContent = policy.total;
+            document.getElementById('stat-high').textContent = policy.high;
+            document.getElementById('stat-mid').textContent = policy.mid;
+            document.getElementById('stat-low').textContent = policy.low;
+
+            document.getElementById('meta-doc-number').textContent = policy.docNumber;
+            document.getElementById('meta-issuer').textContent = policy.issuer;
+            document.getElementById('meta-publish-date').textContent = policy.publishDate;
+            document.getElementById('meta-apply-deadline').textContent = policy.applyDeadline;
+            document.getElementById('support-content').innerHTML = policy.supportMethod;
+            renderConditions(policy.conditions);
+
+            // 更新三列企业数量徽标
+            const countBadges = document.querySelectorAll('#enterprise-columns .card-column > div:first-child span.bg-green-100, #enterprise-columns .card-column > div:first-child span.bg-orange-100, #enterprise-columns .card-column > div:first-child span.bg-purple-100');
+            if (countBadges.length >= 3) {
+                countBadges[0].textContent = `${policy.columnCounts.high}家`;
+                countBadges[1].textContent = `${policy.columnCounts.mid}家`;
+                countBadges[2].textContent = `${policy.columnCounts.low}家`;
+            }
+
+            // 底部静态诊断区已移除，诊断结果改为在右侧 AI 对话中动态展示。
+
+            // --- 1. 选择项状态联动（全选/清空按钮） ---
+            const columns = document.querySelectorAll('.card-column');
+            
+            function updateColumnState(column) {
+                const checkboxes = column.querySelectorAll('.item-checkbox');
+                const checkedBoxes = column.querySelectorAll('.item-checkbox:checked');
+                const selectedCountSpan = column.querySelector('.selected-count');
+                const toggleBtn = column.querySelector('.toggle-select-btn');
+                
+                selectedCountSpan.textContent = `已选择 ${checkedBoxes.length} 家`;
+                
+                if (checkedBoxes.length === 0) {
+                    toggleBtn.textContent = '全选';
+                } else {
+                    toggleBtn.textContent = '清空';
+                }
+                updateTotalSelectedCount();
+            }
+
+            function updateTotalSelectedCount() {
+                const allChecked = document.querySelectorAll('.item-checkbox:checked').length;
+                const bottomText = document.getElementById('bottom-selected-text');
+                if (bottomText) {
+                    bottomText.textContent = `(已选择: 共计 ${allChecked} 家企业)`;
+                }
+            }
+
+            // --- 3. 核心：动态按名称/匹配度排序逻辑 ---
+            columns.forEach(column => {
+                const checkboxes = column.querySelectorAll('.item-checkbox');
+                const toggleBtn = column.querySelector('.toggle-select-btn');
+                const listContainer = column.querySelector('.list-container');
+                const sortBtns = column.querySelectorAll('.sort-btn');
+                
+                // 单个列表维护独立的排序字段和状态标识
+                let currentSortField = ''; 
+                let currentSortOrder = 0; // 0: 默认, 1: 升序, -1: 降序
+
+                sortBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const field = btn.getAttribute('data-sort');
+                        
+                        // 状态周转
+                        if (currentSortField === field) {
+                            if (currentSortOrder === 0) currentSortOrder = 1;
+                            else if (currentSortOrder === 1) currentSortOrder = -1;
+                            else currentSortOrder = 0;
+                        } else {
+                            currentSortField = field;
+                            currentSortOrder = 1;
+                        }
+
+                        const rows = Array.from(listContainer.querySelectorAll('.item-row'));
+                        
+                        if (currentSortOrder === 0) {
+                            // 默认恢复方案：按匹配度降序
+                            rows.sort((a, b) => parseFloat(b.getAttribute('data-degree')) - parseFloat(a.getAttribute('data-degree')));
+                        } else {
+                            rows.sort((a, b) => {
+                                let valA = a.getAttribute(`data-${field}`);
+                                let valB = b.getAttribute(`data-${field}`);
+                                
+                                if (field === 'degree') {
+                                    return (parseFloat(valA) - parseFloat(valB)) * currentSortOrder;
+                                } else {
+                                    return valA.localeCompare(valB, 'zh-CN') * currentSortOrder;
+                                }
+                            });
+                        }
+
+                        // 渲染排序后的元素
+                        rows.forEach(row => listContainer.appendChild(row));
+                        
+                        // 重置文本高亮效果
+                        sortBtns.forEach(b => {
+                            b.classList.remove('text-blue-600', 'font-bold');
+                            b.querySelector('span').classList.remove('text-blue-600');
+                            b.querySelector('span').classList.add('text-gray-400');
+                        });
+                        
+                        if (currentSortOrder !== 0) {
+                            btn.classList.add('text-blue-600', 'font-bold');
+                            btn.querySelector('span').classList.remove('text-gray-400');
+                            btn.querySelector('span').classList.add('text-blue-600');
+                        }
+                    });
+                });
+
+                // 复选框变更事件
+                checkboxes.forEach(cb => {
+                    cb.addEventListener('change', () => updateColumnState(column));
+                });
+
+                // 清空 / 全选点击事件
+                toggleBtn.addEventListener('click', () => {
+                    const checkedBoxes = column.querySelectorAll('.item-checkbox:checked');
+                    if (checkedBoxes.length > 0) {
+                        checkboxes.forEach(cb => cb.checked = false);
+                    } else {
+                        checkboxes.forEach(cb => cb.checked = true);
+                    }
+                    updateColumnState(column);
+                });
+
+                // 页面首次载入更新状态
+                updateColumnState(column);
+            });
+
+            // --- 4. 右侧 AI：预设问题与流式输出 ---
+            const policyWelcomeHtml = `
+                您好！我是您的政策匹配助手，可以基于当前政策页面快速分析：
+                <div class="ai-suggestions">
+                    <div class="suggestion-pill" data-query="这项政策当前匹配情况如何？">这项政策当前匹配情况如何？</div>
+                    <div class="suggestion-pill" data-query="哪些企业建议优先查看？">哪些企业建议优先查看？</div>
+                    <div class="suggestion-pill" data-query="解释匹配度的计算方法">解释匹配度的计算方法</div>
+                </div>
+            `;
+
+            function buildPolicyResponse(query) {
+                if (query === '这项政策当前匹配情况如何？') {
+                    return `
+                        当前查看的是 <strong>${policy.title}</strong>。该政策共匹配 <strong style="color:#1890ff;">${policy.total} 家</strong>企业，其中高匹配 <strong style="color:#52c41a;">${policy.high} 家</strong>、中匹配 <strong style="color:#faad14;">${policy.mid} 家</strong>、低匹配 <strong>${policy.low} 家</strong>。<br><br>
+                        申报截止时间为 <strong>${policy.applyDeadline}</strong>，当前剩余 <strong style="color:#f5222d;">${policy.daysLeft} 天</strong>。建议优先查看高匹配企业，并对中匹配企业核验关键条件。
+                    `;
+                }
+                if (query === '哪些企业建议优先查看？') {
+                    return `
+                        建议优先查看 <strong style="color:#52c41a;">高匹配企业</strong>，当前共 <strong>${policy.high} 家</strong>。页面中已展示的高匹配企业包括：<br><br>
+                        1. <strong>泉州南安智通装备有限公司</strong>，匹配度 92%，当前无明显差距；<br>
+                        2. <strong>福建蓝田新材料科技有限公司</strong>，匹配度 90%，需关注设备条件；<br>
+                        3. <strong>泉州创威精密制造有限公司</strong>，匹配度 88%，需补充申报材料；<br>
+                        4. <strong>南安捷锐智能装备有限公司</strong>，匹配度 86%，需核验营收指标；<br>
+                        5. <strong>泉州蓝田未来科技有限公司</strong>，匹配度 85%，需核验备案情况。<br><br>
+                        这些企业与政策条件接近，适合作为优先查看对象。
+                    `;
+                }
+                if (query === '申报条件和主要差距是什么？') {
+                    const requiredConditions = policy.conditions.filter(item => item.required).map(item => item.name).join('、');
+                    return `
+                        该政策的必要申报条件主要包括：<strong>${requiredConditions}</strong>。<br><br>
+                        从页面当前企业差距看，中匹配企业主要集中在 <strong>研发不足、设备投资不足、项目未完成、营收未达</strong> 等问题；低匹配企业主要集中在 <strong>行业不符、规模不足、缺少资质</strong> 等问题。<br><br>
+                        建议先对高匹配企业核验材料完整性，再对中匹配企业开展差距诊断。
+                    `;
+                }
+                if (query === '解释匹配度的计算方法') {
+                    return `
+                        当前政策匹配度由 AI 综合分析企业画像与政策申报条件计算得出，主要包含以下几个维度：<br><br>
+                        <strong>1. 基础条件匹配（40%）</strong><br>
+                        判断企业是否满足政策硬性要求，例如企业类型、所属行业、注册地区、项目属性等。<br><br>
+                        <strong>2. 指标条件匹配（30%）</strong><br>
+                        对企业实际经营数据与政策要求进行比对，例如设备投资额、营业收入、研发费用比例、知识产权数量等。<br><br>
+                        <strong>3. 发展能力匹配（20%）</strong><br>
+                        综合评估企业规模、成长性、创新能力以及未来申报潜力。<br><br>
+                        <strong>4. 材料完备度匹配（10%）</strong><br>
+                        判断企业已有申报材料与政策要求材料的匹配程度。<br><br>
+                        最终形成综合匹配度：<strong style="color:#1890ff;">匹配度 = 基础条件×40% + 指标条件×30% + 发展能力×20% + 材料完备度×10%</strong>。<br><br>
+                        其中：<br>
+                        <span style="color:#52c41a;font-weight:bold;">≥80%</span> 为高匹配企业，建议优先推动申报；<br>
+                        <span style="color:#faad14;font-weight:bold;">50%-80%</span> 为中匹配企业，建议开展条件补齐；<br>
+                        <span style="color:#666;font-weight:bold;">20%-50%</span> 为低匹配企业，可关注后续培育方向。
+                    `;
+                }
+                return `
+                    我可以基于当前政策的基本信息、申报条件、匹配企业分布和企业差距进行分析。建议优先查看政策匹配概况、高匹配企业和主要申报条件。
+                `;
+            }
+
+            function appendChatMessage(type, content) {
+                const chatBody = document.getElementById('chatBody');
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${type === 'user' ? 'chat-user' : 'chat-ai'}`;
+                bubble.innerHTML = content;
+                chatBody.appendChild(bubble);
+                chatBody.scrollTop = chatBody.scrollHeight;
+                return bubble;
+            }
+
+            function tokenizeHtml(html) {
+                const tokens = [];
+                let i = 0;
+                while (i < html.length) {
+                    if (html[i] === '<') {
+                        const end = html.indexOf('>', i);
+                        if (end !== -1) {
+                            tokens.push(html.slice(i, end + 1));
+                            i = end + 1;
+                        } else {
+                            tokens.push(html[i]);
+                            i += 1;
+                        }
+                    } else if (html[i] === '&') {
+                        const end = html.indexOf(';', i);
+                        if (end !== -1 && end - i <= 10) {
+                            tokens.push(html.slice(i, end + 1));
+                            i = end + 1;
+                        } else {
+                            tokens.push(html[i]);
+                            i += 1;
+                        }
+                    } else {
+                        tokens.push(html[i]);
+                        i += 1;
+                    }
+                }
+                return tokens;
+            }
+
+            function streamChatMessage(type, content, speed = 16) {
+                const chatBody = document.getElementById('chatBody');
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${type === 'user' ? 'chat-user' : 'chat-ai'}`;
+                chatBody.appendChild(bubble);
+
+                const tokens = tokenizeHtml(content);
+                let index = 0;
+                let currentHtml = '';
+                const timer = setInterval(() => {
+                    const step = tokens[index] && tokens[index].startsWith('<') ? 1 : 2;
+                    for (let i = 0; i < step && index < tokens.length; i += 1) {
+                        currentHtml += tokens[index];
+                        index += 1;
+                    }
+                    bubble.innerHTML = currentHtml + '<span class="typing-cursor">|</span>';
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                    if (index >= tokens.length) {
+                        clearInterval(timer);
+                        bubble.innerHTML = currentHtml;
+                        chatBody.scrollTop = chatBody.scrollHeight;
+                    }
+                }, speed);
+            }
+
+            function handlePolicyQuestion(query) {
+                if (!query) return;
+                appendChatMessage('user', query);
+                setTimeout(() => streamChatMessage('ai', buildPolicyResponse(query)), 260);
+            }
+
+            function bindPolicySuggestions() {
+                document.querySelectorAll('.suggestion-pill').forEach(pill => {
+                    pill.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handlePolicyQuestion(this.dataset.query);
+                    };
+                });
+            }
+
+
+
+            // --- 5. 批量推送弹窗与 AI 诊断交互 ---
+            const singleDiagnosisAnswer = `
+                <strong>一、综合评估</strong><br>
+                匹配情况：匹配度高，具备申报机会，无硬性不符条件，申报通过率高。<br>
+                申报截止：<strong style="color:#f5222d;">2026-07-31</strong>，剩余申报周期 <strong style="color:#f5222d;">30 天</strong>。<br>
+                该企业是本次政策的优质申报主体，推进申报落地难度低，可重点跟进对接。<br><br>
+                <strong>二、条件核验</strong><br>
+                ✅ 行业：属于工业制造主体，符合政策适用范围<br>
+                ✅ 投资：技改设备投入达到政策最低门槛<br>
+                ✅ 备案：技改项目已完成官方备案手续<br>
+                ✅ 经营：营收、研发投入指标均满足申报标准<br>
+                ✅ 项目：技改项目完工，符合申报时效要求<br>
+                企业全部申报硬性条件均已达标，不存在需要补齐的准入短板，仅需规范整理申报材料即可提交。<br><br>
+                <strong>三、申报材料清单</strong><br>
+                1. 技改设备采购合同、发票复印件<br>
+                2. 项目备案回执文件<br>
+                3. 年度营收财务报表<br>
+                4. 研发费用归集凭证<br>
+                园区可提供标准化材料模板，协助企业快速梳理归集各类资料。<br><br>
+                <strong>四、园区配套服务</strong><br>
+                1. 时效建议：督促企业 10 日内完成线上申报提交，规避截止期系统拥堵问题；<br>
+                2. 材料核查重点：重点核对发票盖章、项目竣工时间格式，减少材料驳回情况；<br>
+                3. 可向企业提供的配套服务：<br>
+                （1）材料前置预审：一对一协助企业自查资料格式、内容瑕疵；<br>
+                （2）系统填报指导：线上 / 线下陪同企业完成申报平台操作；<br>
+                （3）进度跟踪服务：定时跟进企业申报进度，临近截止主动催告；<br>
+                （4）全流程答疑：同步讲解补贴审核、资金拨付全流程相关问题。<br><br>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;"><button style="border:1px solid #1890ff; color:#1890ff; background:#fff; border-radius:6px; padding:6px 10px; font-weight:bold;">推送企业提醒</button><button style="border:1px solid #d9d9d9; color:#606266; background:#fff; border-radius:6px; padding:6px 10px; font-weight:bold;">下载诊断报告</button></div>
+            `;
+
+            const multiDiagnosisAnswer = `
+                <strong>一、综合评估</strong><br>
+                匹配情况：高匹配 <strong style="color:#52c41a;">1 家</strong>、中匹配 <strong style="color:#faad14;">3 家</strong>、低匹配 <strong>2 家</strong>。<br>
+                申报截止：<strong style="color:#f5222d;">2026-07-31</strong>，剩余申报周期 <strong style="color:#f5222d;">30 天</strong>。<br>
+                整体研判：可按匹配等级分层开展跟进服务，优先推动高匹配企业完成申报。<br><br>
+                <strong>二、分企业配套服务</strong><br>
+                1. <strong>南安智通装备（高匹配）</strong><br>
+                全部条件达标，可直接申报。<br>
+                园区服务：材料预审、填报一对一指导。<br><br>
+                2. <strong>泉州南安精工电子（中匹配）</strong><br>
+                缺项目备案、研发材料，3-5 天可补齐。<br>
+                园区服务：代办备案指引、研发资料模板。<br><br>
+                3. <strong>东昇机械制造（中匹配）</strong><br>
+                技改投资凭证不足，补齐票据即可申报。<br>
+                园区服务：设备票据整理辅导。<br><br>
+                4. <strong>华创自动化（中匹配）</strong><br>
+                项目未竣工，本期无法申报。<br>
+                园区服务：竣工后自动推送下期申报通知。<br><br>
+                5. <strong>南安宏远贸易（低匹配）</strong><br>
+                行业不符、无技改项目，不适用本政策。<br>
+                园区服务：匹配商贸服务业扶持政策。<br><br>
+                6. <strong>绿源环保科技（低匹配）</strong><br>
+                营收规模不达标，短期无法整改。<br>
+                园区服务：推送小升规、绿色制造相关政策。<br><br>
+                <strong>三、服务建议</strong><br>
+                1. 优先推进南安智通装备，督促 10 日内完成申报；<br>
+                2. 集中辅导 3 家中匹配企业，统一发放材料模板；<br>
+                3. 低匹配企业转介其他匹配扶持政策。<br><br>
+                
+            `;
+
+            function buildGapRadarSvg(detail) {
+                const isLow = detail && detail.matchLevel === '低匹配';
+                const selectedData = isLow ? [45, 40, 35, 30, 42] : [65, 55, 50, 45, 60];
+                const benchmarkData = [88, 92, 85, 90, 95];
+                const labels = ['经营能力', '资质条件', '研发能力', '知识产权', '项目条件'];
+                const cx = 130;
+                const cy = 105;
+                const radius = 66;
+
+                function pointFor(value, index) {
+                    const angle = -Math.PI / 2 + index * 2 * Math.PI / labels.length;
+                    const r = radius * value / 100;
+                    return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
+                }
+
+                function polygonPoints(values) {
+                    return values.map((value, index) => pointFor(value, index).map(num => num.toFixed(1)).join(',')).join(' ');
+                }
+
+                function gridPolygon(percent) {
+                    const values = labels.map(() => percent);
+                    return `<polygon points="${polygonPoints(values)}" fill="none" stroke="#e5e7eb" stroke-width="1"/>`;
+                }
+
+                const axisLines = labels.map((label, index) => {
+                    const [x, y] = pointFor(100, index);
+                    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e5e7eb" stroke-width="1"/>`;
+                }).join('');
+
+                const labelPositions = [
+                    [cx, cy - radius - 14, 'middle'],
+                    [cx + radius + 22, cy - 14, 'middle'],
+                    [cx + radius + 15, cy + radius * 0.82, 'middle'],
+                    [cx - radius - 20, cy + radius * 0.82, 'middle'],
+                    [cx - radius - 22, cy - 14, 'middle']
+                ];
+                const labelEls = labels.map((label, index) => {
+                    const [x, y, anchor] = labelPositions[index];
+                    return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="11" fill="#6b7280">${label}</text>`;
+                }).join('');
+
+                return `
+                    <div style="background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:10px 8px; margin:10px 0 12px;">
+                        <div style="font-weight:700; color:#1f2937; margin-bottom:6px;">差距对比 <span style="font-size:12px; color:#6b7280; font-weight:400;">（对标历史成功申报企业）</span></div>
+                        <svg width="260" height="210" viewBox="0 0 260 210" role="img" aria-label="经营能力、资质条件、研发能力、知识产权、项目条件五维雷达图">
+                            ${gridPolygon(20)}
+                            ${gridPolygon(40)}
+                            ${gridPolygon(60)}
+                            ${gridPolygon(80)}
+                            ${gridPolygon(100)}
+                            ${axisLines}
+                            <polygon points="${polygonPoints(benchmarkData)}" fill="rgba(34,197,94,0.16)" stroke="#22c55e" stroke-width="2"/>
+                            <polygon points="${polygonPoints(selectedData)}" fill="rgba(249,115,22,0.20)" stroke="#f97316" stroke-width="2"/>
+                            ${benchmarkData.map((value, index) => { const [x,y] = pointFor(value,index); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#22c55e"/>`; }).join('')}
+                            ${selectedData.map((value, index) => { const [x,y] = pointFor(value,index); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#f97316"/>`; }).join('')}
+                            ${labelEls}
+                        </svg>
+                        <div style="display:flex; gap:12px; font-size:12px; color:#4b5563; margin-top:2px;">
+                            <span><i style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f97316; margin-right:4px;"></i>所选企业</span>
+                            <span><i style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#22c55e; margin-right:4px;"></i>历史成功申报企业平均</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function buildSingleCultivationGapAnswer(detail) {
+                const name = detail && detail.name ? detail.name : '所选企业';
+                const level = detail && detail.matchLevel ? detail.matchLevel : '中/低匹配';
+                const degree = detail && detail.degree ? detail.degree : '—';
+                const gap = detail && detail.gap ? detail.gap : '项目条件、研发能力、知识产权材料待补齐';
+                return `
+                    <strong>企业差距诊断与培育计划</strong><br>
+                    已选择：共计 <strong>1 家企业</strong>｜诊断对象：<strong>${name}</strong>（${level}，匹配度 ${degree}%）<br>
+                    ${buildGapRadarSvg(detail)}
+                    <strong>一、差距对比（对标历史成功申报企业）</strong><br>
+                    已按 <strong>经营能力、资质条件、研发能力、知识产权、项目条件</strong> 5 个维度，与<strong>历史成功申报企业平均水平</strong>进行对比。<br>
+                    当前企业在 <strong>研发能力、知识产权、项目条件</strong> 方面存在明显差距，短期应优先补齐项目备案、设备合同和发票材料。<br><br>
+                    <strong>二、主要差距汇总</strong><br>
+                    <span style="color:#f97316;">●</span> <strong>研发费用不足：</strong>平均差距 28.4 万元<br>
+                    <span style="color:#f97316;">●</span> <strong>缺少项目备案：</strong>需补齐或核验技改项目备案材料<br>
+                    <span style="color:#f97316;">●</span> <strong>设备投资证明不足：</strong>平均差距 15.6 万元<br>
+                    <span style="color:#f97316;">●</span> <strong>缺少专利证明：</strong>尚未形成有效发明专利或知识产权证明<br>
+                    <span style="color:#f97316;">●</span> <strong>当前页面差距标签：</strong>${gap}<br><br>
+                    <strong>三、AI 培育计划建议</strong><br>
+                    ✅ <strong>短期（1-2 个月）</strong><br>
+                    完成项目备案，准备设备合同和发票材料。<br><br>
+                    ✅ <strong>中期（2-6 个月）</strong><br>
+                    加大研发投入，完善研发费用归集。<br><br>
+                    ✅ <strong>长期（6-12 个月）</strong><br>
+                    布局专利申请，提升创新能力指标。<br><br>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px;"><button class="js-generate-cultivation-task-ai" data-company="${name}" data-level="${level}" data-degree="${degree}" data-gap="${gap}" style="border:1px solid #1890ff; color:#1890ff; background:#fff; border-radius:6px; padding:6px 10px; font-weight:bold; cursor:pointer;">生成培育任务</button></div>
+                `;
+            }
+
+            function buildCultivationTaskAnswer(company, level, degree, gap) {
+                const safeCompany = company || '所选企业';
+                const safeLevel = level || '中/低匹配';
+                const safeDegree = degree || '—';
+                const safeGap = gap || '研发、知识产权、项目材料待补齐';
+                return `
+                    <strong>已生成培育任务</strong><br>
+                    培育对象：<strong>${safeCompany}</strong>（${safeLevel}，当前匹配度 ${safeDegree}%）<br>
+                    主要差距：<strong>${safeGap}</strong><br><br>
+                    <strong>阶段一：材料核验与补齐｜1-2周</strong><br>
+                    园区服务人员协助企业核对技改项目备案、设备合同、发票、付款凭证等材料，形成缺失材料清单，并向企业推送一次性补正要求。<br><br>
+                    <strong>阶段二：项目条件完善｜1个月内</strong><br>
+                    跟进项目备案、竣工验收、设备投资证明等关键条件，帮助企业判断是否具备本期申报条件；不具备的，记录下期申报准备节点。<br><br>
+                    <strong>阶段三：研发与知识产权提升｜2-6个月</strong><br>
+                    指导企业规范归集研发费用，完善研发项目、研发人员、专利或软著材料，为专精特新、高企等后续政策申报打基础。<br><br>
+                    <strong>阶段四：申报前预审｜申报截止前10天</strong><br>
+                    园区对企业申报材料开展完整性预审，重点检查发票信息、备案信息、项目时间、财务数据口径是否一致，并提醒企业按期提交。<br><br>
+                    <strong>建议跟进节奏：</strong>每周更新一次材料补齐进度；若连续两周无进展，转为人工重点跟进。
+                `;
+            }
+
+            function getSelectedCompanyDetails() {
+                return Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => {
+                    const row = cb.closest('.item-row');
+                    const column = cb.closest('.card-column');
+                    const heading = column ? (column.querySelector('h3')?.textContent || '') : '';
+                    const gapSpan = row ? row.querySelector('div[class*="w-1/3"] span') : null;
+                    let matchLevel = '中/低匹配';
+                    if (heading.includes('高匹配')) matchLevel = '高匹配';
+                    if (heading.includes('中匹配')) matchLevel = '中匹配';
+                    if (heading.includes('低匹配')) matchLevel = '低匹配';
+                    return row ? {
+                        name: row.getAttribute('data-name') || '',
+                        degree: row.getAttribute('data-degree') || '',
+                        matchLevel,
+                        gap: gapSpan ? gapSpan.textContent.trim() : ''
+                    } : null;
+                }).filter(Boolean);
+            }
+
+            function getSelectedCompanies() {
+                return getSelectedCompanyDetails().map(item => item.name).filter(Boolean);
+            }
+
+            function updatePushModalCompanies() {
+                const companies = getSelectedCompanies();
+                const selectedCompanyTitle = document.getElementById('selectedCompanyTitle');
+                const selectedCompanyList = document.getElementById('selectedCompanyList');
+                if (!selectedCompanyTitle || !selectedCompanyList) return companies;
+                selectedCompanyTitle.textContent = `2. 待推送企业清单（本次选中 ${companies.length} 家）`;
+                selectedCompanyList.innerHTML = companies.length
+                    ? companies.map(name => `<span class="company-chip">${name}</span>`).join('')
+                    : '<span class="text-gray-400 text-xs">请先勾选需要推送提醒的企业</span>';
+                return companies;
+            }
+
+            function openPushModal() {
+                const companies = updatePushModalCompanies();
+                document.getElementById('pushReminderConfirmView').style.display = '';
+                document.getElementById('pushReminderSuccessView').style.display = 'none';
+                document.getElementById('pushReminderModal').classList.add('show');
+            }
+
+            function closePushModal() {
+                document.getElementById('pushReminderModal').classList.remove('show');
+            }
+
+            function handleAIDiagnosisClick() {
+                const selectedDetails = getSelectedCompanyDetails();
+                const companies = selectedDetails.map(item => item.name).filter(Boolean);
+                if (companies.length === 0) {
+                    appendChatMessage('user', 'AI诊断');
+                    setTimeout(() => streamChatMessage('ai', '请先在左侧企业列表中勾选需要诊断的企业，再点击 AI诊断。'), 220);
+                    return;
+                }
+                appendChatMessage('user', `诊断对象：${companies.join('、')}`);
+                let answer = multiDiagnosisAnswer;
+                if (selectedDetails.length === 1) {
+                    answer = selectedDetails[0].matchLevel === '高匹配'
+                        ? singleDiagnosisAnswer
+                        : buildSingleCultivationGapAnswer(selectedDetails[0]);
+                }
+                setTimeout(() => streamChatMessage('ai', answer), 260);
+            }
+
+            document.getElementById('chatBody').addEventListener('click', (e) => {
+                const taskBtn = e.target.closest('.js-generate-cultivation-task-ai');
+                if (!taskBtn) return;
+                const company = taskBtn.getAttribute('data-company') || '所选企业';
+                const level = taskBtn.getAttribute('data-level') || '中/低匹配';
+                const degree = taskBtn.getAttribute('data-degree') || '—';
+                const gap = taskBtn.getAttribute('data-gap') || '研发、知识产权、项目材料待补齐';
+                appendChatMessage('user', `为${company}生成培育任务`);
+                setTimeout(() => streamChatMessage('ai', buildCultivationTaskAnswer(company, level, degree, gap)), 260);
+            });
+
+            document.querySelectorAll('.js-push-reminder-btn').forEach(btn => btn.addEventListener('click', openPushModal));
+            document.querySelectorAll('.js-ai-diagnosis-btn').forEach(btn => btn.addEventListener('click', handleAIDiagnosisClick));
+            document.getElementById('closePushModal').addEventListener('click', closePushModal);
+            document.getElementById('cancelPushModal').addEventListener('click', closePushModal);
+            document.getElementById('finishPushModal').addEventListener('click', closePushModal);
+            document.getElementById('pushReminderModal').addEventListener('click', (e) => { if (e.target.id === 'pushReminderModal') closePushModal(); });
+            document.getElementById('confirmPushModal').addEventListener('click', () => {
+                const count = getSelectedCompanies().length;
+                document.getElementById('pushSuccessText').textContent = `共 ${count} 家企业，消息将陆续送达，推送记录可在后台消息管理页查看。`;
+                document.getElementById('pushReminderConfirmView').style.display = 'none';
+                document.getElementById('pushReminderSuccessView').style.display = '';
+            });
+
+            bindPolicySuggestions();
+            const aiInput = document.getElementById('aiInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const resetChatBtn = document.getElementById('resetChatBtn');
+
+            function sendInputQuestion() {
+                const query = aiInput.value.trim();
+                if (!query) return;
+                aiInput.value = '';
+                sendBtn.classList.remove('active');
+                handlePolicyQuestion(query);
+            }
+
+            aiInput.addEventListener('input', () => {
+                sendBtn.classList.toggle('active', aiInput.value.trim().length > 0);
+            });
+            aiInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendInputQuestion();
+            });
+            sendBtn.addEventListener('click', sendInputQuestion);
+            resetChatBtn.addEventListener('click', () => {
+                document.getElementById('chatBody').innerHTML = `<div class="chat-bubble chat-ai">${policyWelcomeHtml}</div>`;
+                bindPolicySuggestions();
+            });
+        });
+    </script>
+
+
+    <div class="modal-mask" id="hmModalMask">
+        <div class="hm-modal wide" id="hmModalBox">
+            <div class="hm-modal-header">
+                <div class="hm-modal-title" id="hmModalTitle">生成园区任务</div>
+                <button class="modal-close" type="button" id="hmModalClose">×</button>
+            </div>
+            <div class="hm-modal-body" id="hmModalBody"></div>
+            <div class="hm-modal-footer" id="hmModalFooter"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hmDatasets = {
+                high: [
+                    {id:'h1', name:'泉州南安智通装备有限公司', match:92, satisfiedItems:['企业规模：中型','行业匹配：专用设备','设备投资：520万元（要求≥300万元）','项目属性：已备案'], missingItems:['上一年度研发费用占营业收入比例 ≥ 3%'], park:['申报表','设备清单','材料清单'], company:['设备发票','付款凭证'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'h2', name:'福建蓝田新材料科技有限公司', match:90, satisfiedItems:['企业规模：中型','行业匹配：新材料','设备投资：380万元（要求≥300万元）'], missingItems:['上一年度研发费用占营业收入比例 ≥ 3%','技改项目已完成备案并纳入投资统计'], park:['备案回执','设备清单','申报表'], company:['采购合同','设备明细','项目说明'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'h3', name:'泉州创威精密制造有限公司', match:88, satisfiedItems:['企业规模：中型','行业匹配：精密制造','项目方向符合'], missingItems:['设备投资额 ≥ 300万元','是否存在有效技术改造成果需确认'], park:['申报表','材料清单'], company:['设备发票','付款凭证'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'h4', name:'南安捷锐智能装备有限公司', match:86, satisfiedItems:['企业规模：中型','行业匹配：智能装备','项目方向符合'], missingItems:['项目建设进度符合申报要求','上一年度营业收入达到申报要求'], park:['备案回执','项目说明'], company:['项目实施说明','采购合同'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'h5', name:'泉州蓝田未来科技有限公司', match:85, satisfiedItems:['行业匹配：智能装备','设备投资：420万元（要求≥300万元）','企业规模达标'], missingItems:['设备投资额 ≥ 300万元','近2年研发费用占营业收入比例 ≥ 3%'], park:['设备清单','材料清单'], company:['付款凭证','设备明细'], taskStatus:'pending-task', materialStatus:'company-wait'}
+                ],
+                mid: [
+                    {id:'m1', name:'泉州南安精工电子有限公司', match:72, satisfiedItems:['行业匹配：电子信息','主营业务收入达标','企业规模：中型'], missingItems:['研发人员不足','专利数量偏少','研发费用待补'], park:['申报表','材料清单'], company:['研发费用表','知识产权证明'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'m2', name:'东昇机械制造（泉州）有限公司', match:68, satisfiedItems:['行业匹配：装备制造','企业规模达标'], missingItems:['设备投资不足','付款凭证缺失','项目未完工'], park:['设备清单','项目说明'], company:['付款凭证','项目实施说明'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'m3', name:'泉州华创自动化设备有限公司', match:65, satisfiedItems:['企业规模：中型','行业匹配：自动化'], missingItems:['项目未完工','合同材料缺失'], park:['项目说明','申报表'], company:['采购合同','项目实施说明'], taskStatus:'pending-task', materialStatus:'company-wait'}
+                ],
+                low: [
+                    {id:'l1', name:'南安宏远贸易有限公司', match:38, satisfiedItems:['企业规模：小型'], missingItems:['行业不符','无技改项目','设备投资不足'], park:['申报表','材料清单'], company:['营业执照'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'l2', name:'泉州绿源环保科技有限公司', match:36, satisfiedItems:['企业规模达标'], missingItems:['行业方向不符','项目备案缺失','设备投资不足'], park:['申报表','项目说明'], company:['项目实施说明'], taskStatus:'pending-task', materialStatus:'company-wait'},
+                    {id:'l3', name:'南安新悦文化传媒有限公司', match:34, satisfiedItems:['注册地符合'], missingItems:['行业不符','无制造业项目','无设备投资'], park:['申报表'], company:['经营情况说明'], taskStatus:'pending-task', materialStatus:'company-wait'}
+                ]
+            };
+            const hmTabMeta = {
+                high: {title:'高匹配企业', badge:'≥80%｜14家'},
+                mid: {title:'中匹配企业', badge:'50%~80%｜23家'},
+                low: {title:'低匹配企业', badge:'20%~50%｜5家'}
+            };
+            let hmCurrentType = 'high';
+            let hmRows = hmDatasets[hmCurrentType];
+            const parkOptions = ['申报表','设备清单','备案回执','项目说明','材料清单','财务报表','研发费用表','知识产权证明','其他'];
+            const companyOptions = ['采购合同','设备发票','付款凭证','设备明细','项目实施说明','财务报表','研发费用表','知识产权证明','营业执照','其他'];
+            const statusText = {
+                'pending-task':'待生成任务',
+                'park-doing':'园区处理中',
+                'company-wait':'待企业补充',
+                'done':'已完成'
+            };
+            let hmTaskSeq = 1;
+            const hmTaskStore = [
+                {
+                    id:'init_task_1',
+                    rowId:'h1',
+                    company:'泉州南安智通装备有限公司',
+                    policy:'泉州市高质量发展支持企业技术改造专项',
+                    assistItem:'材料预审',
+                    taskName:'核对设备发票、付款凭证等申报材料',
+                    dueDate:'2026-07-15',
+                    status:'doing'
+                },
+                {
+                    id:'init_task_2',
+                    rowId:'h2',
+                    company:'福建蓝田新材料科技有限公司',
+                    policy:'泉州市高质量发展支持企业技术改造专项',
+                    assistItem:'条件确认',
+                    taskName:'确认研发费用比例及项目备案情况',
+                    dueDate:'2026-07-20',
+                    status:'doing'
+                },
+                {
+                    id:'init_task_3',
+                    rowId:'h3',
+                    company:'泉州创威精密制造有限公司',
+                    policy:'泉州市高质量发展支持企业技术改造专项',
+                    assistItem:'企业提醒',
+                    taskName:'通知企业补充设备投资相关材料',
+                    dueDate:'2026-07-10',
+                    status:'done'
+                }
+            ];
+            const taskStatusText = { doing: '进行中', done: '已完成', overdue: '已逾期' };
+
+            function findAnyRow(id){
+                for (const type of Object.keys(hmDatasets)) {
+                    const row = hmDatasets[type].find(item => item.id === id);
+                    if (row) return row;
+                }
+                return null;
+            }
+            function getTaskDisplayStatus(task){
+                if (task.status === 'done') return 'done';
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const due = task.dueDate ? new Date(task.dueDate + 'T00:00:00') : null;
+                if (due && due < today) return 'overdue';
+                return 'doing';
+            }
+            function taskStateBadge(task){
+                const st = getTaskDisplayStatus(task);
+                return `<span class="task-state ${st}">${taskStatusText[st]}</span>`;
+            }
+            function detailStatusKey(type){
+                return type === 'park' ? 'parkDone' : 'companyDone';
+            }
+            function ensureDetailStatus(row, type){
+                const arr = type === 'park' ? row.park : row.company;
+                const key = detailStatusKey(type);
+                if (!Array.isArray(row[key])) row[key] = [];
+                while (row[key].length < arr.length) row[key].push(false);
+                if (row[key].length > arr.length) row[key].length = arr.length;
+
+                // 保存完成时间
+                const timeKey = type === 'park' ? 'parkDoneTime' : 'companyDoneTime';
+                if (!Array.isArray(row[timeKey])) row[timeKey] = [];
+                while (row[timeKey].length < arr.length) row[timeKey].push('');
+                if (row[timeKey].length > arr.length) row[timeKey].length = arr.length;
+
+                return row[key];
+            }
+            function refreshRowSummaryStatus(row){
+                const parkDone = ensureDetailStatus(row, 'park');
+                const companyDone = ensureDetailStatus(row, 'company');
+                if (parkDone.length && parkDone.every(Boolean)) row.taskStatus = 'done';
+                else if (parkDone.some(Boolean)) row.taskStatus = 'park-doing';
+                else row.taskStatus = 'pending-task';
+                row.materialStatus = companyDone.length && companyDone.every(Boolean) ? 'done' : 'company-wait';
+            }
+            function pendingTaskCount(){
+                return hmTaskStore.filter(task => task.status !== 'done').length;
+            }
+            function refreshTaskBadge(){
+                const badge = document.getElementById('todoTaskBadge');
+                if (badge) badge.textContent = pendingTaskCount();
+            }
+            function refreshCompanyTaskStatus(rowId){
+                const row = findAnyRow(rowId);
+                if (!row) return;
+                const tasks = hmTaskStore.filter(task => task.rowId === rowId);
+                if (!tasks.length) row.taskStatus = 'pending-task';
+                else if (tasks.every(task => task.status === 'done')) row.taskStatus = 'done';
+                else row.taskStatus = 'park-doing';
+            }
+
+            function statusBadge(type){
+                return `<span class="hm-status ${type}">${statusText[type] || type}</span>`;
+            }
+            function renderCondList(items, kind){
+                const cls = kind === 'ok' ? 'hm-cond-ok' : 'hm-cond-miss';
+                const icon = kind === 'ok' ? 'fa-circle-check' : 'fa-circle';
+                const displayItems = (items || []).filter(t => {
+                    if(kind !== 'miss') return true;
+                    return !['设备投资额 ≥ 300万元','设备投资：520万元（要求≥300万元）','设备投资：380万元（要求≥300万元）','设备投资：420万元（要求≥300万元）'].some(v=>String(t).includes(v.split('（')[0]));
+                });
+                return `<div class="hm-cond-list">${displayItems.map(t=>`<div class="hm-cond-item ${cls}" title="${t}"><i class="fa-solid ${icon}"></i><span>${t}</span></div>`).join('')}</div>`;
+            }
+            function renderTags(row, type){
+                const arr = type === 'park' ? row.park : row.company;
+                const cls = type === 'park' ? 'park' : 'company';
+                const options = type === 'park' ? parkOptions : companyOptions;
+                return `<div class="hm-tag-wrap" data-id="${row.id}" data-type="${type}">
+                    <ul class="hm-list">
+                        ${arr.map((t,i)=>`<li class="hm-tag ${cls} template-link" title="点击查看模板：${t}" data-template="${t}" data-index="${i}"><span>${t}</span><button class="remove-tag" data-index="${i}" title="删除">×</button></li>`).join('')}
+                        <li class="hm-add-row"><button class="hm-add" type="button" title="新增">+</button></li>
+                    </ul>
+                    <div class="hm-add-panel">
+                        ${options.filter(o=>o!=='其他').map(o=>`<div class="opt" data-value="${o}">${o}</div>`).join('')}
+                        <div class="hm-custom-row"><input placeholder="输入自定义内容"><button type="button" class="custom-add">确认</button></div>
+                    </div>
+                </div>`;
+            }
+            let aiServiceGenerated = false;
+
+        function renderHmTable(){
+            const tbody = document.getElementById('hmTbody');
+            if(!tbody) return;
+            tbody.innerHTML = hmRows.map(row => `
+                <tr class="main-row" data-id="${row.id}" style="${aiServiceGenerated?'border-bottom:none;':''}">
+                    <td style="${aiServiceGenerated?'border-bottom:none;padding-bottom:4px;':''}"><input type="checkbox" class="hm-checkbox accent-blue-600 rounded" data-id="${row.id}"></td>
+                    <td style="${aiServiceGenerated?'border-bottom:none;padding-bottom:4px;':''}"><div class="hm-company"><a href="企业卡片.html?id=${row.id}" class="company-link" title="查看企业详情">${row.name}</a></div></td>
+                    <td style="text-align:center;${aiServiceGenerated?'border-bottom:none;padding-bottom:4px;':''}"><span class="hm-match">${row.match}%</span></td>
+                    <td style="${aiServiceGenerated?'border-bottom:none;padding-bottom:4px;':''}">${renderCondList(row.satisfiedItems, 'ok')}</td>
+                    <td style="${aiServiceGenerated?'border-bottom:none;padding-bottom:4px;':''}">${renderCondList(row.missingItems, 'miss')}</td>
+                    <td style="text-align:center;${aiServiceGenerated?'border-bottom:none;padding-bottom:4px;':''}"><button class="hm-detail-link" data-id="${row.id}">查看详情</button></td>
+                </tr>
+                ${aiServiceGenerated ? `
+                <tr data-ai-row="${row.id}">
+                    <td></td>
+                    <td colspan="5" style="padding-top:0;padding-bottom:6px;">
+                        <div class="ai-task-card">
+                            <button class="ai-close" onclick="this.closest('tr').remove()">×</button>
+                            <div class="ai-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> AI分析结果</div>
+                            <div style="flex:1;border-right:1px solid #bfdbfe;padding-right:18px;">
+                                <span class="label"><i class="fa-solid fa-list-check"></i> 园区可协助事项</span>
+                                ${renderTags(row, 'park')}
+                            </div>
+                            <div style="flex:1;padding-left:0;">
+                                <span class="label orange"><i class="fa-solid fa-briefcase"></i> 企业需确认事项</span>
+                                <div class="confirm-area"><div><div style="font-size:12px;color:#ea580c;font-weight:700;margin:4px 0;">待确认条件</div>${renderCondList(row.missingItems,'miss')}</div>
+                                <div class="material-area"><div style="font-size:12px;color:#ea580c;font-weight:700;margin:4px 0;">准备材料</div>${renderTags(row, 'company')}</div></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>`:''}
+            `).join('');
+            bindHmRowEvents();
+            updateHmSelection();
+        }
+
+        function switchHmTab(type){
+                if(!hmDatasets[type]) return;
+                hmCurrentType = type;
+                hmRows = hmDatasets[type];
+                const meta = hmTabMeta[type];
+                document.getElementById('hmTitleText').textContent = meta.title;
+                document.getElementById('hmTitleBadge').textContent = meta.badge;
+                document.querySelectorAll('.hm-tab').forEach(btn=>btn.classList.toggle('active', btn.dataset.type===type));
+                const selectAll = document.getElementById('hmSelectAll');
+                if(selectAll) selectAll.checked = false;
+                renderHmTable();
+            }
+            function getRow(id){ return hmRows.find(r=>r.id===id); }
+            function bindHmRowEvents(){
+                document.querySelectorAll('.hm-checkbox').forEach(cb=>cb.addEventListener('change', updateHmSelection));
+                document.querySelectorAll('.hm-add').forEach(btn=>{
+                    btn.addEventListener('click', (e)=>{
+                        e.stopPropagation();
+                        const wrap = btn.closest('.hm-tag-wrap');
+                        const panel = wrap.querySelector('.hm-add-panel');
+                        document.querySelectorAll('.hm-add-panel').forEach(p=>{ if(p!==panel) p.classList.remove('show'); });
+                        panel.classList.toggle('show');
+                    });
+                });
+                document.querySelectorAll('.hm-add-panel .opt').forEach(opt=>{
+                    opt.addEventListener('click', ()=>{
+                        const wrap = opt.closest('.hm-tag-wrap');
+                        addHmTag(wrap.dataset.id, wrap.dataset.type, opt.dataset.value);
+                    });
+                });
+                document.querySelectorAll('.custom-add').forEach(btn=>{
+                    btn.addEventListener('click', ()=>{
+                        const wrap = btn.closest('.hm-tag-wrap');
+                        const input = wrap.querySelector('.hm-custom-row input');
+                        const val = input.value.trim();
+                        if(val) addHmTag(wrap.dataset.id, wrap.dataset.type, val);
+                    });
+                });
+                document.querySelectorAll('.remove-tag').forEach(btn=>{
+                    btn.addEventListener('click', (e)=>{
+                        e.stopPropagation();
+                        const wrap = btn.closest('.hm-tag-wrap');
+                        const row = getRow(wrap.dataset.id);
+                        const arr = wrap.dataset.type === 'park' ? row.park : row.company;
+                        const idx = parseInt(btn.dataset.index,10);
+                        const statusArr = ensureDetailStatus(row, wrap.dataset.type);
+                        arr.splice(idx,1);
+                        statusArr.splice(idx,1);
+                        refreshRowSummaryStatus(row);
+                        renderHmTable();
+                    });
+                });
+                document.querySelectorAll('.template-link').forEach(tag=>{
+                    tag.addEventListener('click', (e)=>{
+                        if(e.target.closest('button')) return;
+                        const name = tag.dataset.template;
+                        openHmModal('📄 '+name+'模板', `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div style="font-weight:800;color:#1f2937;">${name}填报预览</div><button class="hm-btn primary" id="fillTemplateBtn">🤖 调用已有数据预填</button></div><div style="border:1px solid #d1d5db;background:#fff;padding:12px;"><h3 style="text-align:center;font-size:18px;font-weight:800;margin-bottom:14px;">${name}</h3><table class="template-preview-table"><tr><th colspan="2">企业基本信息</th></tr><tr><td style="width:25%">企业名称</td><td class="fill-cell"></td></tr><tr><td>统一社会信用代码</td><td class="fill-cell"></td></tr><tr><td>项目名称</td><td class="fill-cell"></td></tr><tr><td>项目建设地点</td><td class="fill-cell"></td></tr><tr><th colspan="2">项目投资情况</th></tr><tr><td>设备投资金额</td><td class="fill-cell"></td></tr><tr><td>项目建设内容</td><td class="fill-cell"></td></tr><tr><td>申报单位意见</td><td style="height:70px"></td></tr></table></div><div id="fillTemplateMsg" style="display:none;color:#16a34a;margin-top:8px;font-weight:700;">✓ 已根据企业画像、政策匹配结果自动填充已有信息</div>`, '<button class="modal-btn modal-btn-primary" onclick="closeHmModal()">关闭</button>', false); setTimeout(()=>{document.getElementById("fillTemplateBtn")?.addEventListener("click",()=>{document.querySelectorAll(".fill-cell")[0].textContent="泉州南安智通装备有限公司";document.querySelectorAll(".fill-cell")[2].textContent="智能装备生产线技术改造项目";document.querySelectorAll(".fill-cell")[4].textContent="520万元";document.getElementById("fillTemplateMsg").style.display="block";})},50);
+                    });
+                });
+                document.querySelectorAll('.hm-tag').forEach(tag=>{
+                    tag.addEventListener('dblclick', (e)=>{
+                        if(e.target.closest('button')) return;
+                        e.stopPropagation();
+                        const wrap = tag.closest('.hm-tag-wrap');
+                        const row = getRow(wrap.dataset.id);
+                        const from = wrap.dataset.type;
+                        const to = from === 'park' ? 'company' : 'park';
+                        const arr = row[from];
+                        const idx = parseInt(tag.dataset.index,10);
+                        const fromStatus = ensureDetailStatus(row, from);
+                        const item = arr.splice(idx,1)[0];
+                        fromStatus.splice(idx,1);
+                        if(item && !row[to].includes(item)) {
+                            row[to].push(item);
+                            ensureDetailStatus(row, to);
+                        }
+                        refreshRowSummaryStatus(row);
+                        renderHmTable();
+                    });
+                });
+                document.querySelectorAll('.hm-detail-link').forEach(btn=>btn.addEventListener('click', ()=>openHmDetail(btn.dataset.id)));
+            }
+            function addHmTag(id, type, val){
+                const row = getRow(id); if(!row) return;
+                if(!row[type].includes(val)) {
+                    row[type].push(val);
+                    ensureDetailStatus(row, type);
+                }
+                refreshRowSummaryStatus(row);
+                renderHmTable();
+            }
+            function selectedRows(){
+                return Array.from(document.querySelectorAll('.hm-checkbox:checked')).map(cb=>getRow(cb.dataset.id)).filter(Boolean);
+            }
+            function updateHmSelection(){
+                const rows = selectedRows();
+                const text = document.getElementById('hmSelectedText');
+                if(text) text.textContent = `已选择 ${rows.length} 家企业`;
+                ['hmGenerateTaskBtn','hmSendReminderBtn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.disabled = rows.length === 0; });
+                const all = document.getElementById('hmSelectAll');
+                if(all){
+                    const checks = Array.from(document.querySelectorAll('.hm-checkbox'));
+                    all.checked = checks.length > 0 && checks.every(c=>c.checked);
+                }
+            }
+            function openHmModal(title, body, footer, wide=true){
+                document.getElementById('hmModalTitle').innerHTML = title;
+                document.getElementById('hmModalBody').innerHTML = body;
+                document.getElementById('hmModalFooter').innerHTML = footer;
+                document.getElementById('hmModalBox').classList.toggle('wide', wide);
+                document.getElementById('hmModalMask').classList.add('show');
+            }
+            function closeHmModal(){ document.getElementById('hmModalMask').classList.remove('show'); }
+            function taskName(item){
+                const map = {'申报表':'准备并发送政策申报表模板','设备清单':'准备设备投资明细清单模板','备案回执':'核验技改项目备案回执','项目说明':'准备项目实施说明模板','材料清单':'整理申报材料补齐清单','财务报表':'核对财务报表口径要求','研发费用表':'提供研发费用归集表模板','知识产权证明':'核验知识产权证明材料'};
+                return map[item] || `跟进${item}`;
+            }
+            function buildTaskRows(rows){
+                return rows.map(r=> r.park.map((item,idx)=>`<tr data-id="${r.id}">
+                    <td><strong class="text-blue-600">${r.name}</strong></td>
+                    <td>${item}</td>
+                    <td><input value="${taskName(item)}"></td>
+                    <td><input type="date" value="2026-07-${idx+10<10?'0':''}${idx+10}"></td>
+                    <td class="hm-task-actions"><button class="hm-delete-row">删除</button></td>
+                </tr>`).join('')).join('');
+            }
+            function buildCustomTaskRow(rows){
+                const options = rows.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+                return `<tr data-custom="1">
+                    <td><select class="hm-task-company-select">${options}</select></td>
+                    <td><input value="自定义事项" placeholder="请输入事项"></td>
+                    <td><input value="" placeholder="请输入任务内容"></td>
+                    <td><input type="date" value="2026-07-15"></td>
+                    <td class="hm-task-actions"><button class="hm-delete-row">删除</button></td>
+                </tr>`;
+            }
+            function bindTaskTableEvents(rows){
+                const tbody = document.getElementById('hmTaskTbody');
+                if(!tbody) return;
+                tbody.onclick = (e)=>{
+                    const del = e.target.closest('.hm-delete-row');
+                    if(del) del.closest('tr').remove();
+                };
+                const addBtn = document.getElementById('hmAddTaskRow');
+                if(addBtn){
+                    addBtn.onclick = ()=>{
+                        tbody.insertAdjacentHTML('beforeend', buildCustomTaskRow(rows));
+                        const last = tbody.lastElementChild;
+                        if(last){
+                            const taskInput = last.querySelector('td:nth-child(3) input');
+                            if(taskInput) taskInput.focus();
+                        }
+                    };
+                }
+            }
+            function collectTasksFromGenerateModal(rows){
+                const created = [];
+                document.querySelectorAll('#hmTaskTbody tr').forEach(tr => {
+                    let rowId = tr.dataset.id || '';
+                    if (!rowId) {
+                        const select = tr.querySelector('.hm-task-company-select');
+                        rowId = select ? select.value : '';
+                    }
+                    const row = findAnyRow(rowId);
+                    if (!row) return;
+                    const assistInput = tr.querySelector('td:nth-child(2) input');
+                    const assistItem = assistInput ? assistInput.value.trim() : tr.querySelector('td:nth-child(2)')?.textContent.trim();
+                    const taskNameInput = tr.querySelector('td:nth-child(3) input');
+                    const dueDateInput = tr.querySelector('td:nth-child(4) input');
+                    const taskNameValue = taskNameInput ? taskNameInput.value.trim() : '';
+                    const dueDateValue = dueDateInput ? dueDateInput.value : '';
+                    if (!taskNameValue) return;
+                    const task = {
+                        id: `task_${hmTaskSeq++}`,
+                        rowId,
+                        company: row.name,
+                        policy: document.getElementById('policy-title')?.textContent || '当前政策',
+                        assistItem: assistItem || '园区协助事项',
+                        taskName: taskNameValue,
+                        dueDate: dueDateValue,
+                        status: 'doing'
+                    };
+                    hmTaskStore.push(task);
+                    created.push(task);
+                });
+                Array.from(new Set(created.map(task => task.rowId))).forEach(refreshCompanyTaskStatus);
+                refreshTaskBadge();
+                return created;
+            }
+            function renderTodoTaskList(filter = 'all'){
+                const tasks = hmTaskStore.filter(task => {
+                    const st = getTaskDisplayStatus(task);
+                    if (filter === 'all') return true;
+                    if (filter === 'todo') return task.status !== 'done';
+                    return st === filter;
+                });
+                const total = hmTaskStore.length;
+                const todo = pendingTaskCount();
+                const done = hmTaskStore.filter(task => task.status === 'done').length;
+                const overdue = hmTaskStore.filter(task => getTaskDisplayStatus(task) === 'overdue').length;
+                const tabs = `<div class="task-list-top">
+                    <div>共 <strong class="text-gray-800">${total}</strong> 项任务｜待办 <strong class="text-blue-600">${todo}</strong> 项｜已完成 <strong class="text-green-600">${done}</strong> 项｜逾期 <strong class="text-red-600">${overdue}</strong> 项</div>
+                    <div class="task-filter-tabs">
+                        <button class="task-filter-tab ${filter==='all'?'active':''}" data-filter="all">全部</button>
+                        <button class="task-filter-tab ${filter==='todo'?'active':''}" data-filter="todo">待办</button>
+                        <button class="task-filter-tab ${filter==='done'?'active':''}" data-filter="done">已完成</button>
+                        <button class="task-filter-tab ${filter==='overdue'?'active':''}" data-filter="overdue">已逾期</button>
+                    </div>
+                </div>`;
+                if (!hmTaskStore.length) {
+                    return `${tabs}<div class="task-empty"><i class="fa-regular fa-clipboard text-2xl mb-2"></i><br>暂无园区任务。请先在企业列表中勾选企业，并点击“生成园区任务”。</div>`;
+                }
+                const rowsHtml = tasks.length ? tasks.map(task => `<tr data-task-id="${task.id}">
+                    <td><strong class="text-blue-600">${task.company}</strong><div class="text-gray-400 mt-1">${task.policy}</div></td>
+                    <td>${task.assistItem}</td>
+                    <td>${task.taskName}</td>
+                    <td>${task.dueDate || '—'}</td>
+                    <td>${taskStateBadge(task)}</td>
+                    <td class="hm-task-actions"><button class="task-finish-btn ${task.status==='done'?'done':''}" data-task-id="${task.id}">${task.status === 'done' ? '取消完成' : '标记完成'}</button></td>
+                </tr>`).join('') : `<tr><td colspan="6"><div class="task-empty">当前筛选条件下暂无任务</div></td></tr>`;
+                return `${tabs}<table class="hm-task-table"><thead><tr><th style="width:190px">企业名称</th><th style="width:145px">园区事项</th><th>任务内容</th><th style="width:115px">预计完成时间</th><th style="width:90px">任务状态</th><th style="width:90px">操作</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+            }
+            function openTodoTaskList(filter = 'all'){
+                openHmModal('<i class="fa-solid fa-list-check text-blue-500"></i> 待办任务清单', renderTodoTaskList(filter), `<button class="modal-btn modal-btn-primary" id="hmCancelModal">确定</button>`, true);
+                document.getElementById('hmCancelModal').onclick = closeHmModal;
+                const body = document.getElementById('hmModalBody');
+                body.querySelectorAll('.task-filter-tab').forEach(btn => {
+                    btn.onclick = () => openTodoTaskList(btn.dataset.filter || 'all');
+                });
+                body.querySelectorAll('.task-finish-btn').forEach(btn => {
+                    btn.onclick = () => {
+                        const task = hmTaskStore.find(item => item.id === btn.dataset.taskId);
+                        if (!task) return;
+                        task.status = task.status === 'done' ? 'doing' : 'done';
+                        refreshCompanyTaskStatus(task.rowId);
+                        renderHmTable();
+                        refreshTaskBadge();
+                        openTodoTaskList(filter);
+                    };
+                });
+            }
+
+            function openGenerateTasks(){
+                const rows = selectedRows();
+                const body = `<table class="hm-task-table"><thead><tr><th style="width:190px">企业名称</th><th style="width:150px">园区可协助事项</th><th>生成任务</th><th style="width:130px">预计完成时间</th><th style="width:70px">操作</th></tr></thead><tbody id="hmTaskTbody">${buildTaskRows(rows)}</tbody></table>`;
+                const footer = `<button class="modal-btn modal-btn-secondary" id="hmCancelModal">取消</button><button class="hm-btn" id="hmAddTaskRow">+ 新增任务</button><button class="modal-btn modal-btn-primary" id="hmConfirmTasks">确认生成任务</button>`;
+                openHmModal('<i class="fa-solid fa-list-check text-blue-500"></i> 生成园区任务', body, footer);
+                document.getElementById('hmCancelModal').onclick = closeHmModal;
+                bindTaskTableEvents(rows);
+                document.getElementById('hmConfirmTasks').onclick = ()=>{
+                    const createdTasks = collectTasksFromGenerateModal(rows);
+                    renderHmTable();
+                    closeHmModal();
+                    if(typeof appendChatMessage === 'function') appendChatMessage('ai', `已为 <strong>${rows.length} 家企业</strong>生成 <strong>${createdTasks.length} 项</strong>园区任务，任务已进入右上角头像菜单的“待办任务”。相关企业的园区任务状态已更新为“园区处理中”。`);
+                    openTodoTaskList('todo');
+                };
+            }
+            function openSendReminders(){
+                const rows = selectedRows();
+                const body = `<div class="hm-summary">已选择 ${rows.length} 家企业。系统根据企业匹配情况生成提醒内容，支持发送前预览。</div>
+                <div class="modal-section">
+                    <div class="modal-section-title">1. 政策基础信息</div>
+                    <div>政策：<strong>${document.getElementById('policy-title')?.textContent || '当前政策'}</strong></div>
+                    <div>申报截止：<strong style="color:#f5222d;">${document.getElementById('meta-apply-deadline')?.textContent || '2026-07-31'}</strong></div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">2. 待推送企业清单</div>
+                    <div class="company-list">${rows.map(r=>`<span class="company-chip">${r.name}</span>`).join('')}</div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">3. 推送渠道（默认全选）</div>
+                    <div class="channel-row">
+                        <label><input type="checkbox" checked> 短信通知</label>
+                        <label><input type="checkbox" checked> 平台站内消息</label>
+                        <label><input type="checkbox" checked> 微信推送</label>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-title">4. 通知预览（自动替换企业名称）</div>
+                    <div class="preview-box">
+                        您好！根据南安市政策服务系统研判，【企业名称】有机会参与《${document.getElementById('policy-title')?.textContent || '当前政策'}》的申报。申报将于 ${document.getElementById('meta-apply-deadline')?.textContent || '2026年07月31日'} 截止，请尽快登录平台核对并准备申报材料，园区将协助完成后续申报服务。
+                    </div>
+                </div>`;
+                const footer = `<button class="modal-btn modal-btn-secondary" id="hmCancelModal">取消</button><button class="modal-btn modal-btn-primary" id="hmConfirmReminders">确认发送提醒</button>`;
+                openHmModal('<i class="fa-regular fa-paper-plane text-green-500"></i> 推送企业提醒', body, footer);
+                document.getElementById('hmCancelModal').onclick = closeHmModal;
+                document.getElementById('hmConfirmReminders').onclick = ()=>{
+                    rows.forEach(r=>r.materialStatus='company-wait');
+                    renderHmTable();
+                    closeHmModal();
+                    if(typeof appendChatMessage === 'function') appendChatMessage('ai', `已向 <strong>${rows.length} 家企业</strong>发送申报提醒，企业可通过短信、平台消息和微信渠道查看提醒内容。`);
+                };
+            }
+            function renderDetailStatusList(row, type){
+                const items = type === 'park' ? row.park : row.company;
+                const states = ensureDetailStatus(row, type);
+                const timeKey = type === 'park' ? 'parkDoneTime' : 'companyDoneTime';
+                const doneTimes = row[timeKey];
+                const itemCls = type === 'park' ? 'park' : 'company';
+                const actionText = type === 'park' ? '已完成' : '已补充';
+                return `<div class="detail-status-list">${items.map((item, idx)=>`
+                    <div class="detail-status-item ${itemCls} ${states[idx] ? 'done' : ''}" data-type="${type}" data-index="${idx}" style="display:grid;grid-template-columns:1fr 110px 80px;align-items:center;">
+                        <span class="detail-status-text" title="${item}">${item}</span>
+                        <span class="detail-complete-time text-xs text-gray-500">${doneTimes[idx] || '—'}</span>
+                        <label class="detail-status-check">
+                            <input type="checkbox" class="detail-status-checkbox" data-type="${type}" data-index="${idx}" ${states[idx] ? 'checked' : ''}>
+                            <span>${actionText}</span>
+                        </label>
+                    </div>
+                `).join('')}</div>`;
+            }
+            function bindDetailStatusEvents(row){
+                document.querySelectorAll('.detail-status-checkbox').forEach(input=>{
+                    input.addEventListener('change', ()=>{
+                        const type = input.dataset.type;
+                        const idx = parseInt(input.dataset.index, 10);
+                        const states = ensureDetailStatus(row, type);
+                        const timeKey = type === 'park' ? 'parkDoneTime' : 'companyDoneTime';
+                        states[idx] = input.checked;
+                        row[timeKey][idx] = input.checked ? new Date().toISOString().slice(0,10) : '';
+                        input.closest('.detail-status-item')?.classList.toggle('done', input.checked);
+                        const timeEl = input.closest('.detail-status-item')?.querySelector('.detail-complete-time');
+                        if(timeEl) timeEl.textContent = row[timeKey][idx] || '—';
+                        refreshRowSummaryStatus(row);
+                    });
+                });
+            }
+            function openHmDetail(id){
+                const r = getRow(id); if(!r) return;
+                ensureDetailStatus(r, 'park');
+                ensureDetailStatus(r, 'company');
+                const body = `<div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="modal-section col-span-2"><div class="modal-section-title">企业匹配概况</div><div>企业：<strong>${r.name}</strong></div><div>匹配度：<strong class="text-green-600">${r.match}%</strong></div><div>已满足条件：${(r.satisfiedItems||[]).length} 项｜未满足条件：${(r.missingItems||[]).length} 项</div></div>
+                    <div class="modal-section"><div class="modal-section-title">园区可协助事项</div>${renderDetailStatusList(r, 'park')}</div>
+                    <div class="modal-section"><div class="modal-section-title">企业需确认事项</div>${renderDetailStatusList(r, 'company')}</div>
+                </div>`;
+                openHmModal('<i class="fa-solid fa-circle-info text-blue-500"></i> 企业详情', body, `<button class="modal-btn modal-btn-primary" id="hmCancelModal">确定</button>`, false);
+                document.getElementById('hmCancelModal').onclick = closeHmModal;
+                bindDetailStatusEvents(r);
+            }
+            document.addEventListener('click', (e)=>{ if(!e.target.closest('.hm-tag-wrap')) document.querySelectorAll('.hm-add-panel').forEach(p=>p.classList.remove('show')); });
+            document.querySelectorAll('.hm-tab').forEach(btn=>btn.addEventListener('click', ()=>switchHmTab(btn.dataset.type)));
+            const selectAll = document.getElementById('hmSelectAll');
+            if(selectAll) selectAll.addEventListener('change', ()=>{ document.querySelectorAll('.hm-checkbox').forEach(c=>c.checked=selectAll.checked); updateHmSelection(); });
+            document.getElementById('hmGenerateTaskBtn')?.addEventListener('click', openGenerateTasks);
+            document.getElementById('hmSendReminderBtn')?.addEventListener('click', openSendReminders);
+            document.getElementById('hmExportBtn')?.addEventListener('click', ()=>alert(`已生成导出清单：${hmTabMeta[hmCurrentType].title}、园区任务清单、企业补充材料清单。`));
+            document.getElementById('hmModalClose')?.addEventListener('click', closeHmModal);
+            document.getElementById('hmModalMask')?.addEventListener('click', (e)=>{ if(e.target.id==='hmModalMask') closeHmModal(); });
+            const userMenuTrigger = document.getElementById('userMenuTrigger');
+            const userMenuCard = document.getElementById('userMenuCard');
+            if(userMenuTrigger && userMenuCard){
+                userMenuTrigger.addEventListener('click', (e)=>{
+                    e.stopPropagation();
+                    userMenuCard.classList.toggle('show');
+                });
+                document.addEventListener('click', ()=>userMenuCard.classList.remove('show'));
+            }
+            document.getElementById('openEnterpriseTrackBtn')?.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                userMenuCard?.classList.remove('show');
+                document.getElementById('enterpriseTrackModal')?.classList.add('show');
+            });
+            document.getElementById('openTodoTasksBtn')?.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                userMenuCard?.classList.remove('show');
+                openTodoTaskList('all');
+            });
+            window.openHmModal = openHmModal;
+            window.closeHmModal = closeHmModal;
+            window.setAiServiceGenerated = function(value = true) {
+                aiServiceGenerated = value;
+                renderHmTable();
+            };
+            renderHmTable();
+            refreshTaskBadge();
+        });
+    </script>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const btn=document.getElementById('aiBatchGenerateBtn');
+    if(!btn)return;
+    btn.addEventListener('click',function(){
+        const mask=document.getElementById('aiLoadingMask');
+        const progress=document.getElementById('aiProgressInner');
+        const status=document.getElementById('aiLoadingStatus');
+        mask.classList.add('show');
+        progress.style.width='0%';
+        let p=0;
+        const steps=[
+            '正在读取企业匹配结果...',
+            '正在分析企业申报差距...',
+            '正在生成园区协助事项与企业补充材料...',
+            '服务任务生成完成'
+        ];
+        const timer=setInterval(()=>{
+            p+=5;
+            progress.style.width=p+'%';
+            status.textContent=steps[Math.min(Math.floor(p/25),3)];
+            if(p>=100){
+                clearInterval(timer);
+                setTimeout(()=>{
+                    mask.classList.remove('show');
+                    if(typeof window.setAiServiceGenerated === 'function') {
+                        window.setAiServiceGenerated(true);
+                    }
+                    if(typeof window.openHmModal==='function'){
+                        window.openHmModal(
+                        '<i class="fa-solid fa-robot text-blue-500"></i> AI服务任务生成完毕',
+                        '<div class="text-sm leading-relaxed text-gray-700">🎉 <b>AI已经根据政策申报所需要的申报材料，智能生成了园区可协助事项和企业确认事项。</b><br><br>生成结果已展示在每行企业下方的浅蓝色服务卡片中。您可以直接在列表中新增或删除园区可协助事项、企业需确认事项，调整后会同步更新到当前企业数据。</div>',
+                        '<button class="modal-btn modal-btn-primary" onclick="closeHmModal()">确定</button>'
+                        );
+                    }
+                },400);
+            }
+        },40);
+    });
+});
+</script>
+
+<script>
+/* ==================== AI跨页面会话保持 ==================== */
+(function(){
+    const STORAGE_KEY = 'park_policy_ai_chat_history_v1';
+    const defaultWelcome = null;
+    function saveChat(){
+        const box=document.getElementById('chatBody');
+        if(!box)return;
+        localStorage.setItem(STORAGE_KEY, box.innerHTML);
+    }
+    function restoreChat(){
+        const box=document.getElementById('chatBody');
+        if(!box)return;
+        const history=localStorage.getItem(STORAGE_KEY);
+        if(history){
+            box.innerHTML=history;
+        }
+    }
+    document.addEventListener('DOMContentLoaded',function(){
+        restoreChat();
+        const box=document.getElementById('chatBody');
+        if(box){
+            const observer=new MutationObserver(function(){
+                saveChat();
+            });
+            observer.observe(box,{childList:true,subtree:true,characterData:true});
+        }
+        const reset=document.getElementById('resetChatBtn');
+        if(reset){
+            reset.addEventListener('click',function(){
+                setTimeout(function(){
+                    localStorage.removeItem(STORAGE_KEY);
+                    saveChat();
+                },100);
+            });
+        }
+        document.querySelectorAll('a[href]').forEach(a=>{
+            const href=a.getAttribute('href');
+            if(href && (href.includes('.html'))){
+                a.addEventListener('click',function(){
+                    saveChat();
+                });
+            }
+        });
+        window.addEventListener('beforeunload',saveChat);
+    });
+})();
+</script>
+
+<div class="modal-mask" id="enterpriseTrackModal"><div class="hm-modal wide"><div class="hm-modal-header"><div class="hm-modal-title">🏢 企业跟踪</div><button class="modal-close" onclick="document.getElementById('enterpriseTrackModal').classList.remove('show')">×</button></div><div class="hm-modal-body"><table class="hm-task-table"><thead><tr><th style="width:220px">企业名称</th><th style="width:180px">跟踪类型</th><th>跟踪内容</th><th style="width:120px">当前进度</th></tr></thead><tbody><tr><td><strong class="text-blue-600">泉州南安智通装备有限公司</strong></td><td>收藏企业</td><td>已发送技改专项申报提醒；待跟进设备发票、付款凭证</td><td><span class="task-state doing">进行中</span></td></tr><tr><td></td><td>企业提醒</td><td>已提醒企业补充设备发票</td><td><span class="task-state doing">进行中</span></td></tr><tr><td><strong class="text-blue-600">福建蓝田新材料科技有限公司</strong></td><td>收藏企业</td><td>关注研发费用比例确认、项目备案情况</td><td><span class="task-state doing">进行中</span></td></tr><tr><td></td><td>企业提醒</td><td>暂无提醒记录</td><td><span class="task-state done">已完成</span></td></tr></tbody></table></div></div></div>
+
+</body>
+</html>

@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>园区政策服务平台 - 政策匹配与培育计划</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* 侧边栏及头像的特制渐变样式 */
+        .logo-icon { width: 24px; height: 24px; background: #2f54eb; border-radius: 4px; flex-shrink: 0; }
+        .dot-person { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, #4b1fd8, #7d4fff); position: relative; }
+        .dot-person::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: 3px; height: 6px; background: #fff; border-radius: 8px 8px 3px 3px; opacity: 0.9; }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 50% 28%, #ffd0aa 0 20%, #292f41 22% 42%, #ec8f42 44% 100%); border: 2px solid #fff; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
+
+        /* 防止选中时文本闪烁 */
+        .tab-btn { user-select: none; }
+
+
+        /* ==================== 返回行统一样式 ==================== */
+        .page-breadcrumb { color: #6b7280; font-size: 14px; display: flex; align-items: center; gap: 8px; font-weight: 500; margin-bottom: 4px; }
+        .page-breadcrumb a { color: #2563eb; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .page-breadcrumb a:hover { text-decoration: underline; }
+        .page-breadcrumb .home-link { color: #6b7280; }
+        .page-breadcrumb .home-link:hover { color: #2563eb; }
+        .page-breadcrumb strong { color: #1f2937; font-weight: 700; }
+
+        /* ==================== AI 助手右侧栏：与看板保持一致 ==================== */
+        .ai-sidebar { width: 320px; background-color: #fff; border-left: 1px solid #ebeef5; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; box-shadow: -4px 0 15px rgba(0,0,0,0.02); }
+        .ai-header { padding: 16px; border-bottom: 1px solid #ebeef5; font-weight: bold; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .ai-content { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #fafafa; scroll-behavior: smooth; }
+        .chat-bubble { max-width: 90%; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 8px; animation: msgFadeIn 0.3s ease both; }
+        @keyframes msgFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .chat-ai { align-self: flex-start; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #ebeef5; color: #303133; }
+        .chat-user { align-self: flex-end; background: #1890ff; color: #fff; border-radius: 8px 8px 0 8px; }
+        .ai-suggestions { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .suggestion-pill { background: #f0f2f5; color: #1890ff; padding: 8px 12px; border-radius: 16px; font-size: 12px; cursor: pointer; width: 100%; border: 1px solid transparent; line-height: 1.4; text-align: left; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .suggestion-pill:hover { background: #e6f7ff; border-color: #1890ff; }
+        .typing-cursor { display:inline-block; margin-left:2px; color:#1890ff; animation: cursorBlink 0.9s infinite; }
+        @keyframes cursorBlink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: 0; } }
+        .ai-input-area { padding: 16px; border-top: 1px solid #ebeef5; background: #fff; }
+        .input-box-wrapper { position: relative; display: flex; align-items: center; }
+        .input-box { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px 35px 10px 10px; font-size: 13px; outline: none; transition: border-color 0.2s; background: #fff; }
+        .input-box:focus { border-color: #1890ff; }
+        .send-btn { position: absolute; right: 10px; color: #c0c4cc; cursor: pointer; font-size: 16px; transition: color 0.2s; border: none; background: transparent; padding: 0; }
+        .send-btn.active, .send-btn:hover { color: #1890ff; }
+        .clickable { cursor: pointer; }
+    
+/* ==================== AI助手统一为首页工作台样式 ==================== */
+.ai-sidebar,.ai-chat-panel{
+    border-radius:18px !important;
+    border:1px solid rgba(226,234,246,.92) !important;
+    box-shadow:0 12px 30px rgba(31,89,171,.08) !important;
+    overflow:hidden;
+}
+.ai-header{
+    padding:14px 16px !important;
+    background:linear-gradient(135deg,#f7fbff 0%,#eef6ff 100%) !important;
+    border-bottom:1px solid #e3edf8 !important;
+}
+.ai-content{
+    background:linear-gradient(180deg,#fbfdff 0%,#f7faff 100%) !important;
+    padding:14px !important;
+    gap:14px !important;
+}
+.chat-bubble{border-radius:14px !important;font-size:13px !important;}
+.chat-ai{
+    border-color:#e3edf8 !important;
+    box-shadow:0 6px 16px rgba(31,89,171,.06) !important;
+}
+.chat-user{
+    background:linear-gradient(135deg,#1677ff,#22a7ff) !important;
+}
+.suggestion-pill{
+    border-radius:12px !important;
+    background:#f3f8ff !important;
+    border:1px solid #e3edf8 !important;
+    color:#0f6edb !important;
+}
+.suggestion-pill:hover{background:#e8f3ff !important;}
+.ai-input-area{background:#fff !important;padding:12px 16px !important;}
+.input-box{
+    border-radius:12px !important;
+    background:#fbfdff !important;
+    border-color:#d8e6f6 !important;
+}
+</style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col overflow-hidden text-gray-800 text-sm min-w-[1200px]">
+
+    <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
+        <div class="flex items-center gap-6">
+            <span class="text-lg font-bold text-gray-800 tracking-wide">泉州市南安市政策匹配平台</span>
+            <span class="text-xs text-gray-400 hidden sm:inline">智能匹配政策与企业，精准发现可申报企业，提升政策转化效果</span>
+        </div>
+        <div class="flex items-center gap-4 text-gray-600">
+            <span class="text-xs">2026-07-01 <i class="fa-regular fa-calendar ml-1"></i></span>
+            <i class="fa-regular fa-bell cursor-pointer hover:text-blue-600 relative text-base">
+                <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </i>
+            <div class="flex items-center gap-2">
+                <div class="avatar"></div>
+                <div class="flex flex-col text-xs leading-tight">
+                    <span class="font-bold text-gray-800">林晓明</span>
+                    <span class="text-gray-400 scale-90 -ml-1">园区管理员</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden min-w-0">
+    <main class="flex-1 flex flex-col overflow-hidden relative min-w-0">
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/50">
+            <div class="page-breadcrumb">
+                <a href="首页.html"><i class="fa-solid fa-arrow-left"></i> 返回首页</a>
+                <a href="首页.html" class="home-link">⌂</a>
+                <span>›</span>
+                <span>企业找政策</span>
+                <span>›</span>
+                <strong>泉州南安智能装备有限公司</strong>
+            </div>
+
+            <div class="flex gap-4 items-stretch">
+                <div class="flex-1 bg-white rounded-lg shadow-sm border border-gray-100 p-6 flex gap-6 min-w-[600px]">
+                    <div class="w-[72px] h-[72px] bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center text-3xl font-bold flex-shrink-0">
+                        ▦
+                    </div>
+                    <div class="flex-1 space-y-3.5">
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-[20px] font-black text-gray-900 tracking-wide">泉州南安智能装备有限公司</h2>
+                            <span class="bg-blue-50 text-blue-600 text-xs px-2.5 py-1 rounded font-bold">培育中</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-8 gap-y-2.5 text-[13px] text-gray-600">
+                            <div class="flex gap-2"><span class="text-gray-400 shrink-0">统一社会信用代码：</span><span class="font-medium text-gray-800">91350583MA8L7Q2B5N</span></div>
+                            <div class="flex gap-2"><span class="text-gray-400 shrink-0">所属行业：</span><span class="font-medium text-gray-800">专用设备制造业</span></div>
+                            <div class="flex gap-2"><span class="text-gray-400 shrink-0">成立时间：</span><span class="font-medium text-gray-800">2019-03-18</span></div>
+                            <div class="flex gap-2"><span class="text-gray-400 shrink-0">注册资本：</span><span class="font-medium text-gray-800">3,800万元</span></div>
+                            <div class="col-span-2 flex gap-2"><span class="text-gray-400 shrink-0">企业规模：</span><span class="font-medium text-gray-800">中型企业</span></div>
+                        </div>
+                        <div class="pt-1">
+                            <button class="border border-blue-500 text-blue-500 hover:bg-blue-50 text-[13px] px-5 py-1.5 rounded-md font-bold transition-all">
+                                查看企业画像
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-[420px] bg-white rounded-lg shadow-sm border border-gray-100 p-6 flex flex-col justify-between shrink-0">
+                    <div class="font-bold text-blue-600 border-l-4 border-blue-600 pl-2 text-[15px] leading-tight">
+                        政策匹配概览
+                    </div>
+                    <div class="grid grid-cols-3 text-center pt-3 pb-1">
+                        <div>
+                            <div class="text-gray-500 text-[13px] mb-1 font-medium">高匹配政策</div>
+                            <div class="text-[28px] font-bold text-green-500">1 <span class="text-gray-400 text-sm font-medium">项</span></div>
+                        </div>
+                        <div class="border-l border-gray-100">
+                            <div class="text-gray-500 text-[13px] mb-1 font-medium">中匹配政策</div>
+                            <div class="text-[28px] font-bold text-orange-400">2 <span class="text-gray-400 text-sm font-medium">项</span></div>
+                        </div>
+                        <div class="border-l border-gray-100">
+                            <div class="text-gray-500 text-[13px] mb-1 font-medium">低匹配政策</div>
+                            <div class="text-[28px] font-bold text-blue-500">1 <span class="text-gray-400 text-sm font-medium">项</span></div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-[12px] text-gray-400 font-medium pt-3 border-t border-gray-50">
+                        <span>结果仅供参考</span><span>更新：2026-07-01</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col overflow-hidden min-h-[500px]">
+                <div class="flex border-b border-gray-200 px-6 bg-white gap-6" id="tabs-container">
+                    <button class="py-3.5 font-bold border-b-[3px] border-blue-600 text-blue-600 text-[15px] transition-all focus:outline-none tab-btn" data-tab="match">政策匹配情况</button>
+                    <button class="py-3.5 font-bold text-gray-500 border-b-[3px] border-transparent hover:text-blue-500 text-[15px] transition-all focus:outline-none tab-btn" data-tab="plan">培育计划</button>
+                </div>
+
+                <div id="tab-content-match" class="flex flex-col flex-1">
+                    <div class="flex items-center justify-between p-4 px-6 border-b border-gray-50 bg-white">
+                        <div class="flex items-center gap-2.5" id="filter-chips">
+                            <span class="text-gray-500 font-medium text-[13px] mr-1">匹配度筛选：</span>
+                            <button class="filter-chip bg-blue-50 text-blue-600 border border-blue-100 text-[13px] px-3.5 py-1.5 rounded font-bold transition-all active-chip whitespace-nowrap" data-filter="all">全部</button>
+                            <button class="filter-chip bg-white text-gray-600 border border-gray-200 text-[13px] px-3.5 py-1.5 rounded font-medium hover:bg-gray-50 transition-all whitespace-nowrap" data-filter="high">高匹配(≥80%)</button>
+                            <button class="filter-chip bg-white text-gray-600 border border-gray-200 text-[13px] px-3.5 py-1.5 rounded font-medium hover:bg-gray-50 transition-all whitespace-nowrap" data-filter="mid">中匹配(50%~80%)</button>
+                            <button class="filter-chip bg-white text-gray-600 border border-gray-200 text-[13px] px-3.5 py-1.5 rounded font-medium hover:bg-gray-50 transition-all whitespace-nowrap" data-filter="low">低匹配(20%~50%)</button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500 font-medium text-[13px]">政策类型：</span>
+                            <select class="border border-gray-200 rounded py-1.5 px-2.5 text-[13px] font-medium text-gray-700 bg-white outline-none focus:border-blue-500 transition-colors cursor-pointer w-32">
+                                <option>全部</option>
+                                <option>资金补贴</option>
+                                <option>企业培育</option>
+                                <option>企业认定</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="p-6 pt-2 flex-1">
+                        <table class="w-full text-left text-sm text-gray-700 table-fixed">
+                            <thead class="text-gray-500 font-bold border-b-2 border-gray-100 text-[13px]">
+                                <tr>
+                                    <th class="py-3 px-2 w-[30%] whitespace-nowrap">政策名称</th>
+                                    <th class="py-3 px-2 w-[13%] text-center whitespace-nowrap">政策类型</th>
+                                    <th class="py-3 px-2 w-[13%] text-center whitespace-nowrap">匹配度 ↕</th>
+                                    <th class="py-3 px-2 w-[24%] whitespace-nowrap">匹配情况</th>
+                                    <th class="py-3 px-2 w-[20%] whitespace-nowrap">主要差距</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100" id="policy-tbody">
+                                <tr class="policy-row hover:bg-gray-50/50 transition-colors" data-match="high">
+                                    <td class="py-4 px-2">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-[36px] h-[36px] bg-green-500 text-white rounded flex items-center justify-center text-lg font-bold flex-shrink-0 shadow-sm mt-0.5">⌁</div>
+                                            <div class="space-y-1.5">
+                                                <div class="font-bold text-gray-900 text-[15px] hover:text-blue-600 cursor-pointer">泉州市高质量发展支持企业技术改造专项</div>
+                                                <div class="flex gap-1.5 flex-wrap">
+                                                    <span class="bg-green-50 text-green-600 border border-green-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">补贴</span>
+                                                    <span class="bg-blue-50 text-blue-600 border border-blue-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">技改</span>
+                                                    <span class="bg-green-50 text-green-600 border border-green-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">设备更新</span>
+                                                </div>
+                                                <div class="text-gray-400 text-[12px] font-medium mt-1">申报截止：<b class="text-red-500 font-bold">2026-07-31</b></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2 text-center font-bold text-gray-700 whitespace-nowrap">资金补贴</td>
+                                    <td class="py-4 px-2">
+                                        <div class="flex flex-col items-center justify-center text-center space-y-1.5">
+                                            <div class="text-[18px] font-black text-green-500 leading-none">86%</div>
+                                            <div class="w-16 bg-gray-100 h-[6px] rounded-full overflow-hidden"><div class="bg-green-500 h-full" style="width: 86%"></div></div>
+                                            <div class="text-[12px] font-bold text-green-500 whitespace-nowrap">高匹配</div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-600 text-[13px]">
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">企业规模：中型企业</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">行业匹配：专用设备制造业</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">设备投资金额：≥300万</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">项目属性：已具备</span></li>
+                                        </ul>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-500 text-[13px]">
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>设备采购发票不齐全</span></li>
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>部分权证已逾期</span></li>
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>投资项目备案材料待补充</span></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+
+                                <tr class="policy-row hover:bg-gray-50/50 transition-colors" data-match="mid">
+                                    <td class="py-4 px-2">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-[36px] h-[36px] bg-orange-500 text-white rounded flex items-center justify-center text-lg font-bold flex-shrink-0 shadow-sm mt-0.5">▰</div>
+                                            <div class="space-y-1.5">
+                                                <div class="font-bold text-gray-900 text-[15px] hover:text-blue-600 cursor-pointer">泉州市专精特新中小企业梯度培育计划</div>
+                                                <div class="flex gap-1.5 flex-wrap">
+                                                    <span class="bg-orange-50 text-orange-500 border border-orange-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">培育</span>
+                                                    <span class="bg-blue-50 text-blue-600 border border-blue-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">创新</span>
+                                                    <span class="bg-green-50 text-green-600 border border-green-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">专精特新</span>
+                                                </div>
+                                                <div class="text-gray-400 text-[12px] font-medium mt-1">申报截止：<b class="text-red-500 font-bold">2026-09-15</b></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2 text-center font-bold text-gray-700 whitespace-nowrap">企业培育</td>
+                                    <td class="py-4 px-2">
+                                        <div class="flex flex-col items-center justify-center text-center space-y-1.5">
+                                            <div class="text-[18px] font-black text-orange-400 leading-none">72%</div>
+                                            <div class="w-16 bg-gray-100 h-[6px] rounded-full overflow-hidden"><div class="bg-orange-400 h-full" style="width: 72%"></div></div>
+                                            <div class="text-[12px] font-bold text-orange-400 whitespace-nowrap">中匹配</div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-600 text-[13px]">
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">企业规模：中型企业</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">主营业务收入：达标</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">研发费用占比：达标</span></li>
+                                        </ul>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-500 text-[13px]">
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>研发人员占比不足 (当前8%)</span></li>
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>专利数量偏少 (当前5项)</span></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+
+                                <tr class="policy-row hover:bg-gray-50/50 transition-colors" data-match="mid">
+                                    <td class="py-4 px-2">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-[36px] h-[36px] bg-purple-500 text-white rounded flex items-center justify-center text-lg font-bold flex-shrink-0 shadow-sm mt-0.5">★</div>
+                                            <div class="space-y-1.5">
+                                                <div class="font-bold text-gray-900 text-[15px] hover:text-blue-600 cursor-pointer">南安市高新技术企业培育奖励政策</div>
+                                                <div class="flex gap-1.5 flex-wrap">
+                                                    <span class="bg-green-50 text-green-600 border border-green-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">认定</span>
+                                                    <span class="bg-blue-50 text-blue-600 border border-blue-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">科技创新</span>
+                                                </div>
+                                                <div class="text-gray-400 text-[12px] font-medium mt-1">申报截止：2026-10-15</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2 text-center font-bold text-gray-700 whitespace-nowrap">企业认定</td>
+                                    <td class="py-4 px-2">
+                                        <div class="flex flex-col items-center justify-center text-center space-y-1.5">
+                                            <div class="text-[18px] font-black text-orange-400 leading-none">58%</div>
+                                            <div class="w-16 bg-gray-100 h-[6px] rounded-full overflow-hidden"><div class="bg-orange-400 h-full" style="width: 58%"></div></div>
+                                            <div class="text-[12px] font-bold text-orange-400 whitespace-nowrap">中匹配</div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-600 text-[13px]">
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">成立时间：达标</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">主营业务：符合要求</span></li>
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">自主知识产权：达标</span></li>
+                                        </ul>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-500 text-[13px]">
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>研发费用占比未达标 (当前2.5%)</span></li>
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>科技人员占比不足 (当前10%)</span></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+
+                                <tr class="policy-row hover:bg-gray-50/50 transition-colors" data-match="low">
+                                    <td class="py-4 px-2">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-[36px] h-[36px] bg-blue-500 text-white rounded flex items-center justify-center text-lg font-bold flex-shrink-0 shadow-sm mt-0.5">♢</div>
+                                            <div class="space-y-1.5">
+                                                <div class="font-bold text-gray-900 text-[15px] hover:text-blue-600 cursor-pointer">福建省智能制造优秀场景培育政策</div>
+                                                <div class="flex gap-1.5 flex-wrap">
+                                                    <span class="bg-blue-50 text-blue-600 border border-blue-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">示范</span>
+                                                    <span class="bg-cyan-50 text-cyan-600 border border-cyan-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">智能制造</span>
+                                                    <span class="bg-green-50 text-green-600 border border-green-100 font-bold px-2 py-0.5 rounded-[4px] text-[11px] whitespace-nowrap">数字化转型</span>
+                                                </div>
+                                                <div class="text-gray-400 text-[12px] font-medium mt-1">申报截止：<b class="text-red-500 font-bold">2026-11-30</b></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2 text-center font-bold text-gray-700 whitespace-nowrap">企业认定</td>
+                                    <td class="py-4 px-2">
+                                        <div class="flex flex-col items-center justify-center text-center space-y-1.5">
+                                            <div class="text-[18px] font-black text-blue-500 leading-none">35%</div>
+                                            <div class="w-16 bg-gray-100 h-[6px] rounded-full overflow-hidden"><div class="bg-blue-500 h-full" style="width: 35%"></div></div>
+                                            <div class="text-[12px] font-bold text-blue-500 whitespace-nowrap">低匹配</div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-600 text-[13px]">
+                                            <li class="flex items-start gap-1.5"><i class="fa-solid fa-circle-check text-green-500 mt-[2px] text-[14px]"></i><span class="whitespace-nowrap">企业规模：中型企业</span></li>
+                                        </ul>
+                                    </td>
+                                    <td class="py-4 px-2">
+                                        <ul class="space-y-1.5 text-gray-500 text-[13px]">
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>智能制造系统未建设</span></li>
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>数字化程度较低</span></li>
+                                            <li class="flex items-start gap-2"><span class="w-[5px] h-[5px] rounded-full bg-gray-400 mt-1.5 shrink-0"></span><span>数据集成能力不足</span></li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-gray-500 text-[13px] font-medium mt-auto">
+                        <span id="match-count-summary">共 4 条政策匹配结果</span>
+                        <div class="flex items-center gap-1.5">
+                            <button class="w-7 h-7 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50"><i class="fa-solid fa-angle-left"></i></button>
+                            <button class="w-7 h-7 bg-blue-600 text-white rounded border border-blue-600 flex items-center justify-center font-bold">1</button>
+                            <button class="w-7 h-7 bg-white rounded border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-gray-50"><i class="fa-solid fa-angle-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-content-plan" class="hidden p-6 bg-white flex-1 flex flex-col">
+
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-[20px] font-black text-gray-900 tracking-wide">企业培育目标总览</h3>
+                        <div class="flex gap-3">
+                            <button class="border border-blue-200 bg-white text-blue-600 font-bold px-4 py-2 rounded-lg text-sm hover:bg-blue-50 transition-colors shadow-sm">调整培育目标</button>
+                            <button id="generateCultivationTaskBtn" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-sm shadow-[0_4px_10px_rgba(37,99,235,0.2)] hover:bg-blue-700 transition-colors">🤖 生成培育任务</button>
+                        </div>
+                    </div>
+
+                    <div class="border border-gray-100 rounded-xl p-5 pb-3 mb-8 shadow-sm flex flex-col">
+                        <div class="grid grid-cols-4 text-center divide-x divide-gray-100">
+                            <div>
+                                <div class="text-[13px] text-gray-900 font-bold mb-1">培育周期</div>
+                                <div class="text-[32px] font-black text-blue-600 leading-none">12<span class="text-[15px] font-bold ml-1 text-gray-900">个月</span></div>
+                            </div>
+                            <div>
+                                <div class="text-[13px] text-gray-900 font-bold mb-1">可申报政策</div>
+                                <div class="text-[32px] font-black text-green-600 leading-none">4<span class="text-[15px] font-bold ml-1 text-gray-900">项</span></div>
+                            </div>
+                            <div>
+                                <div class="text-[13px] text-gray-900 font-bold mb-1">预计获得称号</div>
+                                <div class="text-[32px] font-black text-purple-600 leading-none">3<span class="text-[15px] font-bold ml-1 text-gray-900">类</span></div>
+                            </div>
+                            <div>
+                                <div class="text-[13px] text-gray-900 font-bold mb-1">预计综合收益</div>
+                                <div class="text-[32px] font-black text-orange-500 leading-none">160<span class="text-[15px] font-bold ml-1 text-gray-900">万+</span></div>
+                            </div>
+                        </div>
+                        <div class="text-right text-[12px] text-gray-500 font-medium mt-6">说明：基于企业数据与政策申报条件智能生成培育路径，收益为模拟测算，结果仅供参考｜计划生成：2026-07-01</div>
+                    </div>
+
+                    <div class="relative bg-[#f8fbff] border border-[#e7eef8] rounded-2xl h-[70px] mb-6 flex items-center shadow-sm">
+                        <div class="absolute left-[12%] right-[12%] h-[2px] bg-[#dbe5f3] z-0"></div>
+                        <div class="flex-1 z-10 flex justify-center items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white font-black flex items-center justify-center shadow-md text-[15px]">1</div>
+                            <div class="leading-tight"><div class="font-black text-gray-900 text-[15px]">申报冲刺</div><div class="text-[12px] font-bold text-gray-500">0-1个月</div></div>
+                        </div>
+                        <div class="flex-1 z-10 flex justify-center items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-full bg-[#f97316] text-white font-black flex items-center justify-center shadow-md text-[15px]">2</div>
+                            <div class="leading-tight"><div class="font-black text-gray-900 text-[15px]">基础培育</div><div class="text-[12px] font-bold text-gray-500">1-3个月</div></div>
+                        </div>
+                        <div class="flex-1 z-10 flex justify-center items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-full bg-[#7c3aed] text-white font-black flex items-center justify-center shadow-md text-[15px]">3</div>
+                            <div class="leading-tight"><div class="font-black text-gray-900 text-[15px]">称号突破</div><div class="text-[12px] font-bold text-gray-500">3-6个月</div></div>
+                        </div>
+                        <div class="flex-1 z-10 flex justify-center items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-full bg-[#0891b2] text-white font-black flex items-center justify-center shadow-md text-[15px]">4</div>
+                            <div class="leading-tight"><div class="font-black text-gray-900 text-[15px]">高阶跃升</div><div class="text-[12px] font-bold text-gray-500">6-12个月</div></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-4 flex-1 min-w-[900px]">
+                        <div class="bg-white border border-gray-200 border-t-4 border-t-[#16a34a] rounded-xl shadow-sm flex flex-col p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-2 text-[16px] font-black text-gray-900"><span class="w-7 h-7 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm">1</span>申报冲刺</div>
+                                <span class="bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full text-[12px]">0-1月</span>
+                            </div>
+                            <div class="text-[#42526d] font-bold text-[14px] leading-relaxed mb-4 h-[44px]">补齐技改备案、设备合同与发票，先申报确定性补贴。</div>
+                            <div class="space-y-3 text-[13px] font-medium">
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">可申报</span><span class="text-blue-600 font-bold leading-snug cursor-pointer hover:underline">泉州市高质量发展支持企业技术改造专项</span></div>
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">预计称号</span><span class="text-purple-600 font-bold leading-snug">泉州市重点技改项目入库企业</span></div>
+                                <div class="flex gap-2 items-center mt-1"><span class="text-gray-400 w-[60px] shrink-0">预计收益</span><span class="text-orange-500 font-black text-[18px]">约80万元</span></div>
+                            </div>
+                            <div class="mt-auto pt-6 flex gap-1.5 flex-wrap">
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">项目备案</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">设备清单</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">合同发票</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 border-t-4 border-t-[#f97316] rounded-xl shadow-sm flex flex-col p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-2 text-[16px] font-black text-gray-900"><span class="w-7 h-7 rounded-full bg-[#f97316] text-white flex items-center justify-center text-sm shadow-sm">2</span>基础培育</div>
+                                <span class="bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full text-[12px]">1-3月</span>
+                            </div>
+                            <div class="text-[#42526d] font-bold text-[14px] leading-relaxed mb-4 h-[44px]">归集研发费用，完善研发人员和知识产权台账。</div>
+                            <div class="space-y-3 text-[13px] font-medium">
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">可申报</span><span class="text-blue-600 font-bold leading-snug cursor-pointer hover:underline">福建省福建省创新型中小企业评价</span></div>
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">预计称号</span><span class="text-purple-600 font-bold leading-snug">创新型中小企业</span></div>
+                                <div class="flex gap-2 items-center mt-1"><span class="text-gray-400 w-[60px] shrink-0">预计收益</span><span class="text-orange-500 font-black text-[18px]">约10万元</span></div>
+                            </div>
+                            <div class="mt-auto pt-6 flex gap-1.5 flex-wrap">
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">研发归集</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">人员证明</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">专利台账</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 border-t-4 border-t-[#7c3aed] rounded-xl shadow-sm flex flex-col p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-2 text-[16px] font-black text-gray-900"><span class="w-7 h-7 rounded-full bg-[#7c3aed] text-white flex items-center justify-center text-sm shadow-sm">3</span>称号突破</div>
+                                <span class="bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full text-[12px]">3-6月</span>
+                            </div>
+                            <div class="text-[#42526d] font-bold text-[14px] leading-relaxed mb-4 h-[44px]">补强主导产品、细分市场证明和专利成果材料。</div>
+                            <div class="space-y-3 text-[13px] font-medium">
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">可申报</span><span class="text-blue-600 font-bold leading-snug cursor-pointer hover:underline">泉州市专精特新中小企业梯度培育计划</span></div>
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">预计称号</span><span class="text-purple-600 font-bold leading-snug">省级专精特新中小企业</span></div>
+                                <div class="flex gap-2 items-center mt-1"><span class="text-gray-400 w-[60px] shrink-0">预计收益</span><span class="text-orange-500 font-black text-[18px]">约30万元</span></div>
+                            </div>
+                            <div class="mt-auto pt-6 flex gap-1.5 flex-wrap">
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">市场证明</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">主导产品</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">专利成果</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 border-t-4 border-t-[#0891b2] rounded-xl shadow-sm flex flex-col p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-2 text-[16px] font-black text-gray-900"><span class="w-7 h-7 rounded-full bg-[#0891b2] text-white flex items-center justify-center text-sm shadow-sm">4</span>高阶跃升</div>
+                                <span class="bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full text-[12px]">6-12月</span>
+                            </div>
+                            <div class="text-[#42526d] font-bold text-[14px] leading-relaxed mb-4 h-[44px]">完善高企指标和数字化能力，冲刺高阶认定。</div>
+                            <div class="space-y-3 text-[13px] font-medium">
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">可申报</span><span class="text-blue-600 font-bold leading-snug cursor-pointer hover:underline">高企认定 / 智能制造培育培育</span></div>
+                                <div class="flex gap-2"><span class="text-gray-400 w-[60px] shrink-0">预计称号</span><span class="text-purple-600 font-bold leading-snug">高新技术企业</span></div>
+                                <div class="flex gap-2 items-center mt-1"><span class="text-gray-400 w-[60px] shrink-0">预计收益</span><span class="text-orange-500 font-black text-[18px]">约40万元+</span></div>
+                            </div>
+                            <div class="mt-auto pt-6 flex gap-1.5 flex-wrap">
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">高新收入</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">科技人员</span>
+                                <span class="bg-[#f8fafc] border border-gray-200 text-gray-600 font-bold px-2.5 py-1 rounded-full text-[12px] whitespace-nowrap">数字化能力</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <aside class="ai-sidebar">
+        <div class="ai-header">
+            <div style="display:flex; align-items:center; gap:8px; color:#1890ff;">🤖 AI 助手</div>
+            <div style="color:#909399; font-weight:normal;" class="clickable" id="resetChatBtn">🔄 清空</div>
+        </div>
+        
+        <div class="ai-content" id="chatBody">
+            <div class="chat-bubble chat-ai">
+                您好！我是您的政策匹配助手，可以基于当前企业页面快速分析：
+                <div class="ai-suggestions">
+                    <div class="suggestion-pill" data-query="该企业当前政策匹配情况如何？">该企业当前政策匹配情况如何？</div>
+                    <div class="suggestion-pill" data-query="哪项政策最值得优先申报？">哪项政策最值得优先申报？</div>
+                    <div class="suggestion-pill" data-query="该企业主要差距和提升方向是什么？">该企业主要差距和提升方向是什么？</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-input-area">
+            <div class="input-box-wrapper">
+                <input type="text" id="aiInput" class="input-box" placeholder="请输入您的问题（支持回车）...">
+                <span id="sendBtn" class="send-btn">➤</span>
+            </div>
+            <div style="font-size:12px; color:#c0c4cc; text-align:center; margin-top:8px;">内容由AI生成，仅供参考</div>
+        </div>
+    </aside>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- 1. 匹配度筛选 ---
+            const filterChips = document.querySelectorAll('.filter-chip');
+            const tableRows = document.querySelectorAll('.policy-row');
+            const summaryText = document.getElementById('match-count-summary');
+
+            filterChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    filterChips.forEach(c => {
+                        c.classList.remove('bg-blue-50', 'text-blue-600', 'border-blue-100', 'font-bold', 'active-chip');
+                        c.classList.add('bg-white', 'text-gray-600', 'border-gray-200', 'font-medium');
+                    });
+                    chip.classList.remove('bg-white', 'text-gray-600', 'border-gray-200', 'font-medium');
+                    chip.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-100', 'font-bold', 'active-chip');
+
+                    const filterValue = chip.getAttribute('data-filter');
+                    let visibleCount = 0;
+                    tableRows.forEach(row => {
+                        const rowMatch = row.getAttribute('data-match');
+                        if (filterValue === 'all' || rowMatch === filterValue) {
+                            row.style.display = '';
+                            visibleCount++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                    summaryText.textContent = `共 ${visibleCount} 条政策匹配结果`;
+                });
+            });
+
+            // --- 2. Tabs 切换逻辑 ---
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const contentMatch = document.getElementById('tab-content-match');
+            const contentPlan = document.getElementById('tab-content-plan');
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabButtons.forEach(b => {
+                        b.classList.remove('border-blue-600', 'text-blue-600');
+                        b.classList.add('text-gray-500', 'border-transparent');
+                    });
+                    btn.classList.remove('text-gray-500', 'border-transparent');
+                    btn.classList.add('border-blue-600', 'text-blue-600');
+
+                    const target = btn.getAttribute('data-tab');
+                    if (target === 'match') {
+                        contentMatch.classList.remove('hidden');
+                        contentMatch.classList.add('flex');
+                        contentPlan.classList.add('hidden');
+                        contentPlan.classList.remove('flex');
+                    } else if (target === 'plan') {
+                        contentMatch.classList.add('hidden');
+                        contentMatch.classList.remove('flex');
+                        contentPlan.classList.remove('hidden');
+                        contentPlan.classList.add('flex');
+                    }
+                });
+            });
+
+            // --- 3. 右侧 AI：预设问题与流式输出 ---
+            const enterprisePresetResponses = {
+                '该企业当前政策匹配情况如何？': `
+                    泉州南安智能装备有限公司当前共有 <strong>4 条政策匹配结果</strong>：高匹配 <strong style="color:#52c41a;">1 项</strong>、中匹配 <strong style="color:#faad14;">2 项</strong>、低匹配 <strong style="color:#1890ff;">1 项</strong>。<br><br>
+                    其中，<strong>泉州市高质量发展支持企业技术改造专项</strong>匹配度最高，为 <strong style="color:#52c41a;">86%</strong>；泉州市专精特新中小企业梯度培育计划为 <strong>72%</strong>，南安市高新技术企业培育奖励政策为 <strong>58%</strong>，福建省智能制造优秀场景培育政策为 <strong>35%</strong>。
+                `,
+                '哪项政策最值得优先申报？': `
+                    建议优先推进 <strong>泉州市高质量发展支持企业技术改造专项</strong>。<br><br>
+                    原因有三点：<br>
+                    1. 匹配度最高，达到 <strong style="color:#52c41a;">86%</strong>；<br>
+                    2. 企业规模、行业、设备投资金额、项目属性等核心条件已匹配；<br>
+                    3. 申报截止时间为 <strong style="color:#f5222d;">2026-07-31</strong>，时间最紧。<br><br>
+                    建议先补齐设备采购发票、权证和投资项目备案材料，再进入申报准备。
+                `,
+                '该企业主要差距和提升方向是什么？': `
+                    该企业当前主要差距集中在三类材料和创新指标上：<br><br>
+                    <strong>1. 技改补贴材料缺口</strong><br>
+                    设备采购发票不齐全、部分权证已逾期、投资项目备案材料待补充。<br><br>
+                    <strong>2. 专精特新培育差距</strong><br>
+                    研发人员占比不足，当前约 <strong>8%</strong>；专利数量偏少，当前约 <strong>5 项</strong>。<br><br>
+                    <strong>3. 高企认定差距</strong><br>
+                    研发费用占比当前约 <strong>2.5%</strong>，科技人员占比约 <strong>10%</strong>。<br><br>
+                    建议路径：先冲刺技改补贴，再归集研发费用和知识产权材料，后续推进专精特新与高企认定。
+                `
+,
+                '生成培育任务': `
+                    <strong>阶段一：申报冲刺｜0-1个月</strong><br>
+                    <strong>服务目标：</strong>帮助企业优先申报近期可落地的补贴政策，尽快形成政策兑现成果。<br>
+                    <strong>园区服务：</strong><br>
+                    1. 核验企业是否符合技改补贴申报条件；<br>
+                    2. 协助梳理项目备案、设备合同、发票、付款凭证等材料；<br>
+                    3. 对申报材料进行完整性预审，标记缺失项；<br>
+                    4. 推送材料清单和申报截止提醒，跟踪企业提交进度。<br>
+                    可申报政策：泉州市高质量发展支持企业技术改造专项<br>
+                    预计称号：泉州市重点技改项目入库企业<br>
+                    预计收益：约80万元<br><br>
+
+                    <strong>阶段二：基础培育｜1-3个月</strong><br>
+                    <strong>服务目标：</strong>帮助企业补齐研发、人员、知识产权等创新能力基础材料。<br>
+                    <strong>园区服务：</strong><br>
+                    1. 诊断企业研发费用、研发人员、知识产权等短板；<br>
+                    2. 辅导企业明确研发费用归集口径；<br>
+                    3. 指导企业整理研发人员清单、专利、软著、研发项目等材料；<br>
+                    4. 对照福建省福建省创新型中小企业评价条件进行预评估，形成短板清单。<br>
+                    可申报政策：福建省福建省创新型中小企业评价、研发费用补助<br>
+                    预计称号：创新型中小企业<br>
+                    预计收益：约10万元<br><br>
+
+                    <strong>阶段三：称号突破｜3-6个月</strong><br>
+                    <strong>服务目标：</strong>帮助企业完善专业化、创新能力和市场证明材料，冲刺专精特新类政策。<br>
+                    <strong>园区服务：</strong><br>
+                    1. 协助梳理主导产品、细分市场定位和核心竞争力；<br>
+                    2. 指导企业准备订单合同、客户证明、销售占比等市场材料；<br>
+                    3. 帮助企业完善专利、检测报告、软著、研发成果等创新证明；<br>
+                    4. 对照专精特新条件进行模拟评分和申报预审。<br>
+                    可申报政策：泉州市专精特新中小企业梯度培育计划<br>
+                    预计称号：省级专精特新中小企业<br>
+                    预计收益：约30万元<br><br>
+
+                    <strong>阶段四：高阶跃升｜6-12个月</strong><br>
+                    <strong>服务目标：</strong>帮助企业完善高企认定和智能制造相关指标，冲刺更高层级企业称号。<br>
+                    <strong>园区服务：</strong><br>
+                    1. 跟踪科技人员占比、研发费用占比、高新技术产品收入占比等指标；<br>
+                    2. 辅导企业完善研发项目、知识产权、高新收入和财务归集材料；<br>
+                    3. 协助梳理数字化设备、生产系统、数据采集能力等证明；<br>
+                    4. 开展高企认定预审，并推荐智能制造相关政策。<br>
+                    可申报政策：高新技术企业认定、福建省智能制造优秀场景培育政策<br>
+                    预计称号：高新技术企业 / 智能制造优秀场景培育企业<br>
+                    预计收益：约40万元 + 税收优惠
+                `
+
+            };
+
+            const enterpriseWelcomeHtml = `
+                您好！我是您的政策匹配助手，可以基于当前企业页面快速分析：
+                <div class="ai-suggestions">
+                    <div class="suggestion-pill" data-query="该企业当前政策匹配情况如何？">该企业当前政策匹配情况如何？</div>
+                    <div class="suggestion-pill" data-query="哪项政策最值得优先申报？">哪项政策最值得优先申报？</div>
+                    <div class="suggestion-pill" data-query="该企业主要差距和提升方向是什么？">该企业主要差距和提升方向是什么？</div>
+                </div>
+            `;
+
+            function appendChatMessage(type, content) {
+                const chatBody = document.getElementById('chatBody');
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${type === 'user' ? 'chat-user' : 'chat-ai'}`;
+                bubble.innerHTML = content;
+                chatBody.appendChild(bubble);
+                chatBody.scrollTop = chatBody.scrollHeight;
+                return bubble;
+            }
+
+            function tokenizeHtml(html) {
+                const tokens = [];
+                let i = 0;
+                while (i < html.length) {
+                    if (html[i] === '<') {
+                        const end = html.indexOf('>', i);
+                        if (end !== -1) {
+                            tokens.push(html.slice(i, end + 1));
+                            i = end + 1;
+                        } else {
+                            tokens.push(html[i]);
+                            i += 1;
+                        }
+                    } else if (html[i] === '&') {
+                        const end = html.indexOf(';', i);
+                        if (end !== -1 && end - i <= 10) {
+                            tokens.push(html.slice(i, end + 1));
+                            i = end + 1;
+                        } else {
+                            tokens.push(html[i]);
+                            i += 1;
+                        }
+                    } else {
+                        tokens.push(html[i]);
+                        i += 1;
+                    }
+                }
+                return tokens;
+            }
+
+            function streamChatMessage(type, content, speed = 16) {
+                const chatBody = document.getElementById('chatBody');
+                const bubble = document.createElement('div');
+                bubble.className = `chat-bubble ${type === 'user' ? 'chat-user' : 'chat-ai'}`;
+                chatBody.appendChild(bubble);
+
+                const tokens = tokenizeHtml(content);
+                let index = 0;
+                let currentHtml = '';
+                const timer = setInterval(() => {
+                    const step = tokens[index] && tokens[index].startsWith('<') ? 1 : 2;
+                    for (let i = 0; i < step && index < tokens.length; i += 1) {
+                        currentHtml += tokens[index];
+                        index += 1;
+                    }
+                    bubble.innerHTML = currentHtml + '<span class="typing-cursor">|</span>';
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                    if (index >= tokens.length) {
+                        clearInterval(timer);
+                        bubble.innerHTML = currentHtml;
+                        chatBody.scrollTop = chatBody.scrollHeight;
+                    }
+                }, speed);
+            }
+
+            function handleEnterpriseQuestion(query) {
+                if (!query) return;
+                appendChatMessage('user', query);
+                const answer = enterprisePresetResponses[query] || `
+                    我可以基于当前企业的基础信息、政策匹配结果、主要差距和培育路径进行分析。建议优先查看该企业的匹配概况、最适合申报的政策，以及需要补齐的关键材料。
+                `;
+                setTimeout(() => streamChatMessage('ai', answer), 260);
+            }
+
+            function bindEnterpriseSuggestions() {
+                document.querySelectorAll('.suggestion-pill').forEach(pill => {
+                    pill.addEventListener('click', () => handleEnterpriseQuestion(pill.getAttribute('data-query')));
+                });
+            }
+
+            bindEnterpriseSuggestions();
+
+            const generateCultivationTaskBtn = document.getElementById('generateCultivationTaskBtn');
+            if (generateCultivationTaskBtn) {
+                generateCultivationTaskBtn.addEventListener('click', () => handleEnterpriseQuestion('生成培育任务'));
+            }
+
+            const aiInput = document.getElementById('aiInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const resetChatBtn = document.getElementById('resetChatBtn');
+
+            function sendInputQuestion() {
+                const query = aiInput.value.trim();
+                if (!query) return;
+                aiInput.value = '';
+                sendBtn.classList.remove('active');
+                handleEnterpriseQuestion(query);
+            }
+
+            aiInput.addEventListener('input', () => {
+                sendBtn.classList.toggle('active', aiInput.value.trim().length > 0);
+            });
+            aiInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendInputQuestion();
+            });
+            sendBtn.addEventListener('click', sendInputQuestion);
+            resetChatBtn.addEventListener('click', () => {
+                document.getElementById('chatBody').innerHTML = `<div class="chat-bubble chat-ai">${enterpriseWelcomeHtml}</div>`;
+                bindEnterpriseSuggestions();
+            });
+
+        });
+    </script>
+
+<script>
+/* ==================== AI跨页面会话保持 ==================== */
+(function(){
+    const STORAGE_KEY = 'park_policy_ai_chat_history_v1';
+    const defaultWelcome = null;
+    function saveChat(){
+        const box=document.getElementById('chatBody');
+        if(!box)return;
+        localStorage.setItem(STORAGE_KEY, box.innerHTML);
+    }
+    function restoreChat(){
+        const box=document.getElementById('chatBody');
+        if(!box)return;
+        const history=localStorage.getItem(STORAGE_KEY);
+        if(history){
+            box.innerHTML=history;
+        }
+    }
+    document.addEventListener('DOMContentLoaded',function(){
+        restoreChat();
+        const box=document.getElementById('chatBody');
+        if(box){
+            const observer=new MutationObserver(function(){
+                saveChat();
+            });
+            observer.observe(box,{childList:true,subtree:true,characterData:true});
+        }
+        const reset=document.getElementById('resetChatBtn');
+        if(reset){
+            reset.addEventListener('click',function(){
+                setTimeout(function(){
+                    localStorage.removeItem(STORAGE_KEY);
+                    saveChat();
+                },100);
+            });
+        }
+        document.querySelectorAll('a[href]').forEach(a=>{
+            const href=a.getAttribute('href');
+            if(href && (href.includes('.html'))){
+                a.addEventListener('click',function(){
+                    saveChat();
+                });
+            }
+        });
+        window.addEventListener('beforeunload',saveChat);
+    });
+})();
+</script>
+</body>
+</html>
