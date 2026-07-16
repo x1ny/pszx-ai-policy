@@ -1,0 +1,779 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "政策匹配平台 业务 REST API",
+    "version": "1.0.0",
+    "description": "information-brief Java 服务对前端开放的政策匹配业务接口，对应《政策匹配平台业务前端功能对接文档》。\n\n## 调用约定\n\n- 基础前缀：`/api/policy-copilot/v1`。\n- 本期前端联调阶段免鉴权（见对接文档 §4.2）：浏览器调用不需要携带 `Authorization` 或任何服务 Token。\n- MCP server 到 Java 的服务间调用走 `X-Policy-Copilot-Service-Token` 请求头（值与 Java 侧 `policy.copilot.service-token` 一致），前端不需要携带。\n- 统一响应包装：`{ code, msg, data }`。`code=200` 表示业务成功；`code=500` 表示业务失败（HTTP 状态码仍为 200，前端必须同时检查 HTTP 状态与 `body.code`，见 §4.3）。\n\n## 日期序列化说明（重要）\n\n当前后端未配置全局 Jackson 日期格式，`java.util.Date` 字段默认序列化为 **epoch 毫秒整数**（如 `1718841600000`）。本规范中所有日期/时间字段均按 `integer(format=int64, epoch 毫秒)` 建模，以匹配真实报文。\n若希望这些字段以 ISO 字符串返回（与对接文档 TS 模型里的 `string` 一致），在 Java 侧 `application.yml` 增加：\n```yaml\nspring:\n  jackson:\n    date-format: yyyy-MM-dd HH:mm:ss\n    time-zone: GMT+8\n```\n配置变更后需同步更新本规范对应字段为 `string(format=date-time)`。\n\n## 内部标识使用规则（§4.4）\n\n`enterpriseId/entUid`、`policyId`、`projectId`、`matchId`、`indicatorId`、`fieldName` 只用作路由、查询与上下文参数，不得作为业务文案展示；页面必须展示企业名称、政策名称、项目名称和条件名称。",
+    "contact": { "name": "information-brief 后端" }
+  },
+  "servers": [
+    { "url": "http://127.0.0.1:31454", "description": "本地联调地址（对接文档 §4.1）" }
+  ],
+  "security": [],
+  "tags": [
+    { "name": "Dashboard", "description": "园区政策服务首页工作台" },
+    { "name": "Search", "description": "企业/政策/项目/匹配对象搜索与解析" },
+    { "name": "Context", "description": "政策与企业上下文（详情画像）" },
+    { "name": "Match", "description": "企业找政策、政策找企业、匹配证据与差距" },
+    { "name": "Interaction", "description": "AI 交互埋点（补充接口，对接文档未列入前端必接）" }
+  ],
+  "paths": {
+    "/api/policy-copilot/v1/dashboard/summary": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "首页工作台概览",
+        "description": "对应对接文档 §5.2。返回覆盖政策数、占位 KPI、重点政策列表等。`servedEnterpriseCount`、`matchAnalysisCount` 当前为占位值 0，前端按 `--` 或“统计建设中”展示。",
+        "operationId": "getDashboardSummary",
+        "responses": {
+          "200": {
+            "description": "概览数据。业务失败时 `code=500`、`data=null`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DashboardSummaryResponse" },
+                "examples": {
+                  "success": {
+                    "summary": "正常返回",
+                    "value": {
+                      "code": 200,
+                      "msg": "操作成功",
+                      "data": {
+                        "schemaVersion": "1.0",
+                        "kpis": { "activePolicyCount": 7, "servedEnterpriseCount": 0, "matchAnalysisCount": 0 },
+                        "news": [],
+                        "topPolicies": [
+                          { "policyId": 12, "title": "节能改造补贴", "policyAttribute": "补贴", "deadline": 1718841600000 }
+                        ],
+                        "topEnterprises": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/enterprises/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "搜索企业",
+        "description": "对应对接文档 §10.1。按企业名称或统一社会信用代码检索，多候选时展示企业名称与信用代码让用户选择。",
+        "operationId": "searchEnterprises",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "企业名称或统一社会信用代码（关键词）。",
+            "example": "某科技有限公司"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "企业候选列表。`query` 为空时 `code=500`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnterpriseSearchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/policies/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "搜索政策",
+        "description": "对应对接文档 §10.2。按政策名称或简称检索，支持中英文引号与常见标点差异。",
+        "operationId": "searchPolicies",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "政策名称或简称。",
+            "example": "节能改造"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "政策候选列表。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PolicySearchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/projects/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "搜索项目",
+        "description": "对应对接文档 §10.3。在指定政策范围内按项目名称检索；`policyQuery` 可选，缺省时在当前纳入匹配的全部政策内检索。",
+        "operationId": "searchProjects",
+        "parameters": [
+          {
+            "name": "policyQuery",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "限定政策名称或政策 ID。",
+            "example": "节能改造补贴"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "项目名称或项目 ID。",
+            "example": "节能改造项目"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "项目候选列表。`query` 为空时 `code=500`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProjectSearchResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/matches/resolve": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "解析匹配对象",
+        "description": "对应对接文档 §10.4。可传 `query/enterpriseQuery/policyQuery/projectQuery`。多条结果时按企业、政策和项目名称让用户选择，不要求用户输入内部标识。",
+        "operationId": "resolveMatches",
+        "parameters": [
+          { "name": "query", "in": "query", "required": false, "schema": { "type": "string" }, "description": "matchId 或综合关键词。" },
+          { "name": "enterpriseQuery", "in": "query", "required": false, "schema": { "type": "string" }, "description": "企业名称或统一社会信用代码。" },
+          { "name": "policyQuery", "in": "query", "required": false, "schema": { "type": "string" }, "description": "政策名称或政策 ID。" },
+          { "name": "projectQuery", "in": "query", "required": false, "schema": { "type": "string" }, "description": "项目名称或项目 ID。" }
+        ],
+        "responses": {
+          "200": {
+            "description": "匹配对象候选列表。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchResolveResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/enterprises/{entUid}/context": {
+      "get": {
+        "tags": ["Context"],
+        "summary": "企业政策画像",
+        "description": "对应对接文档 §7.3。路径变量为 `entUid`（对接文档称 `enterpriseId`）。前端优先使用 `entName/creditCode/province/city/industryCategory/profileItems/missingDataItems/abnormalFields`；`serviceProfile/indicators/missingFields` 为内部字段，前端不直接渲染。",
+        "operationId": "getEnterpriseContext",
+        "parameters": [
+          {
+            "name": "entUid",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "企业标识（`entUid`，对接文档中称 `enterpriseId`）。",
+            "example": "10583BAEC594416585810EE1BF62514A"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "企业政策画像。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EnterprisePolicyContextResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/policies/{policyId}/context": {
+      "get": {
+        "tags": ["Context"],
+        "summary": "政策详情与项目条件",
+        "description": "对应对接文档 §6.3。返回政策基础信息与 `projects[].conditions[]`。条件字段映射见 §6.3：`indicator` 为指标名称、`compare+fieldVal` 为条件内容、`conditionRole==='must'` 为必要、`sourceClause` 为原文依据。`fieldName/indicatorId/indicatorScore` 为内部字段，前端不展示。",
+        "operationId": "getPolicyContext",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" },
+            "description": "政策 ID。",
+            "example": 12
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "政策上下文。政策不存在时 `code=500`、`msg=\"政策不存在\"`、`data=null`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PolicyMatchContextResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/matches/policies-by-enterprise": {
+      "post": {
+        "tags": ["Match"],
+        "summary": "企业找政策（实时匹配）",
+        "description": "对应对接文档 §7.4。以 `entUid` 或 `enterpriseId` 为企业键实时计算并写入匹配结果。每条结果为“企业 + 政策 + 项目”，政策相同但项目不同必须保留为不同行。注意：DTO 中的 `matchLevels/policyAttribute/sort/pageNum/pageSize` 当前实时流程尚未实际应用，前端不得依赖其做服务端筛选与分页；前端按返回 `items[]` 自行聚合高中低数量。",
+        "operationId": "findPoliciesByEnterprise",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FindPoliciesForEnterpriseRequest" },
+              "examples": {
+                "byEnterpriseId": {
+                  "summary": "按企业标识查询",
+                  "value": { "enterpriseId": "10583BAEC594416585810EE1BF62514A" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "匹配结果列表。空结果时 `items=[]` 且 `message=\"暂无匹配结果，请确认企业画像数据是否存在\"`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/matches/enterprises-by-policy": {
+      "post": {
+        "tags": ["Match"],
+        "summary": "政策找企业（读取最新预计算结果）",
+        "description": "对应对接文档 §6.4。读取该政策/项目最新匹配企业，不在请求路径全表扫描企业指标。切换项目传对应 `projectId`；切换高中低标签传 `matchLevels`（`high/medium/low`，全部传三者）。空结果时展示接口 `message`，不得自行展示静态企业名单。",
+        "operationId": "findEnterprisesByPolicy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FindEnterprisesForPolicyRequest" },
+              "examples": {
+                "highOnly": {
+                  "summary": "高匹配、项目 4",
+                  "value": { "policyId": 12, "projectId": 4, "keyword": null, "matchLevels": ["high"], "pageNum": 1, "pageSize": 20 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "匹配结果列表。`policyId` 为空时 `code=500`；空结果时 `items=[]` 且 `message=\"暂无最新匹配结果，请先执行企业找政策或后台预计算\"`。注意：该接口返回的 `MatchItem` 中四态计数（satisfiedCount 等）当前为 null、`mainEvidenceSummary` 为空数组。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/matches/{matchId}/evidence": {
+      "get": {
+        "tags": ["Match"],
+        "summary": "匹配条件证据",
+        "description": "对应对接文档 §6.5。按四态分组展示：`satisfied` 已满足、`unsatisfied` 明确不满足、`unknown` 待补充或待确认、`not_applicable` 不适用。禁止把 `unknown` 归入“不满足”。",
+        "operationId": "getMatchEvidence",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "匹配结果标识。",
+            "example": "match_xxx"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "条件证据列表。`matchId` 不存在时 `code=500`、`msg=\"MATCH_NOT_FOUND\"`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchEvidenceResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/matches/{matchId}/gaps": {
+      "get": {
+        "tags": ["Match"],
+        "summary": "匹配差距与材料提示",
+        "description": "对应对接文档 §6.5。`missingData` 为 `evidenceStatus=unknown` 的证据，`unsatisfied` 为 `unsatisfied` 的证据。`materials[]` 当前为通用提示，不是正式材料清单，页面标题应使用“材料准备提示”，不能标成“缺失材料明细”。",
+        "operationId": "getMatchGaps",
+        "parameters": [
+          {
+            "name": "matchId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "匹配结果标识。",
+            "example": "match_xxx"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "差距与材料提示。`matchId` 不存在时 `code=500`、`msg=\"MATCH_NOT_FOUND\"`。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchGapsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/ai-interactions": {
+      "post": {
+        "tags": ["Interaction"],
+        "summary": "记录 AI 交互日志（补充接口）",
+        "description": "对接文档未将此接口列入前端必接范围，仅作为 AI 交互埋点补充。返回 `data` 为是否写入成功（布尔）。",
+        "operationId": "logAiInteraction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AiInteractionLogRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "是否写入成功。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BooleanResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiResponseEnvelope": {
+        "type": "object",
+        "description": "统一响应包装。`code=200` 业务成功；`code=500` 业务失败（HTTP 仍为 200）。前端必须同时检查 HTTP 状态与 `body.code`。",
+        "properties": {
+          "code": { "type": "integer", "description": "200=成功，500=失败。", "example": 200 },
+          "msg": { "type": "string", "description": "提示信息；失败时为业务错误说明或错误码（如 `MATCH_NOT_FOUND`）。", "example": "操作成功" },
+          "data": { "nullable": true, "description": "业务数据，失败时为 null。" }
+        },
+        "required": ["code", "msg"]
+      },
+      "DashboardSummaryResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          {
+            "type": "object",
+            "properties": { "data": { "$ref": "#/components/schemas/DashboardSummary" } }
+          }
+        ]
+      },
+      "DashboardSummary": {
+        "type": "object",
+        "description": "首页概览。",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "kpis": { "$ref": "#/components/schemas/DashboardKpis" },
+          "news": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "description": "今日快讯，当前为空数组；空时显示“暂无快讯”。" },
+          "topPolicies": { "type": "array", "items": { "$ref": "#/components/schemas/TopPolicy" }, "description": "重点政策列表。" },
+          "topEnterprises": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "description": "重点企业列表，本期无数据，前端隐藏。" }
+        },
+        "required": ["schemaVersion", "kpis", "news", "topPolicies", "topEnterprises"]
+      },
+      "DashboardKpis": {
+        "type": "object",
+        "properties": {
+          "activePolicyCount": { "type": "integer", "description": "覆盖政策数（已完成）。", "example": 7 },
+          "servedEnterpriseCount": { "type": "integer", "description": "已服务企业数，当前占位 0，前端显示 `--`。", "example": 0 },
+          "matchAnalysisCount": { "type": "integer", "description": "累计匹配分析，当前占位 0，前端显示 `--`。", "example": 0 }
+        },
+        "required": ["activePolicyCount", "servedEnterpriseCount", "matchAnalysisCount"]
+      },
+      "TopPolicy": {
+        "type": "object",
+        "properties": {
+          "policyId": { "type": "integer", "format": "int64", "example": 12 },
+          "title": { "type": "string", "example": "节能改造补贴" },
+          "policyAttribute": { "type": "string", "nullable": true, "description": "政策属性/支持方式。", "example": "补贴" },
+          "deadline": { "type": "integer", "format": "int64", "nullable": true, "description": "申报截止时间，epoch 毫秒。", "example": 1718841600000 }
+        },
+        "required": ["policyId", "title"]
+      },
+      "EnterpriseSearchResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/EnterpriseSearch" } } }
+        ]
+      },
+      "EnterpriseSearch": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/EnterpriseSearchItem" } }
+        },
+        "required": ["items"]
+      },
+      "EnterpriseSearchItem": {
+        "type": "object",
+        "properties": {
+          "enterpriseId": { "type": "string", "description": "企业标识（`entUid`）。" },
+          "enterpriseName": { "type": "string", "description": "企业名称。" },
+          "creditCode": { "type": "string", "nullable": true, "description": "统一社会信用代码。" }
+        },
+        "required": ["enterpriseId", "enterpriseName"]
+      },
+      "PolicySearchResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PolicySearch" } } }
+        ]
+      },
+      "PolicySearch": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PolicySearchItem" } }
+        },
+        "required": ["items"]
+      },
+      "PolicySearchItem": {
+        "type": "object",
+        "properties": {
+          "policyId": { "type": "integer", "format": "int64", "example": 12 },
+          "policyName": { "type": "string", "example": "节能改造补贴" },
+          "policyFullName": { "type": "string", "nullable": true, "description": "政策全称。" }
+        },
+        "required": ["policyId", "policyName"]
+      },
+      "ProjectSearchResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/ProjectSearch" } } }
+        ]
+      },
+      "ProjectSearch": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ProjectSearchItem" } }
+        },
+        "required": ["items"]
+      },
+      "ProjectSearchItem": {
+        "type": "object",
+        "properties": {
+          "policyId": { "type": "integer", "format": "int64", "example": 12 },
+          "policyName": { "type": "string", "example": "节能改造补贴" },
+          "projectId": { "type": "integer", "format": "int64", "example": 4 },
+          "projectName": { "type": "string", "example": "节能改造项目" }
+        },
+        "required": ["policyId", "policyName", "projectId", "projectName"]
+      },
+      "MatchResolveResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MatchResolve" } } }
+        ]
+      },
+      "MatchResolve": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/MatchResolveItem" } }
+        },
+        "required": ["items"]
+      },
+      "MatchResolveItem": {
+        "type": "object",
+        "properties": {
+          "matchId": { "type": "string" },
+          "policyId": { "type": "integer", "format": "int64" },
+          "policyName": { "type": "string" },
+          "projectId": { "type": "integer", "format": "int64", "nullable": true },
+          "projectName": { "type": "string", "nullable": true },
+          "enterpriseId": { "type": "string", "description": "企业标识（`entUid`）。" },
+          "enterpriseName": { "type": "string" },
+          "score": { "type": "number", "format": "double", "nullable": true, "description": "匹配分。" },
+          "matchLevel": { "type": "string", "nullable": true, "description": "匹配等级。", "enum": ["high", "medium", "low", "none"] }
+        },
+        "required": ["matchId", "policyId", "policyName", "enterpriseId", "enterpriseName"]
+      },
+      "EnterprisePolicyContextResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/EnterprisePolicyContext" } } }
+        ]
+      },
+      "EnterprisePolicyContext": {
+        "type": "object",
+        "description": "企业政策画像。",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "entUid": { "type": "string", "description": "企业标识。" },
+          "entName": { "type": "string", "description": "企业名称。" },
+          "creditCode": { "type": "string", "nullable": true, "description": "统一社会信用代码。" },
+          "province": { "type": "string", "nullable": true },
+          "city": { "type": "string", "nullable": true },
+          "industryCategory": { "type": "string", "nullable": true, "description": "行业。" },
+          "serviceProfile": { "type": "object", "additionalProperties": true, "nullable": true, "description": "业务服务画像，内部字段，不是稳定前端契约，前端不直接渲染。" },
+          "indicators": { "type": "array", "items": { "$ref": "#/components/schemas/EnterpriseIndicatorValue" }, "description": "内部指标值，前端不直接渲染。" },
+          "profileItems": { "type": "array", "items": { "$ref": "#/components/schemas/ProfileItem" }, "description": "业务化画像项，前端展示业务名称、值、来源、更新时间。" },
+          "missingFields": { "type": "array", "items": { "type": "string" }, "description": "内部缺失字段名列表，前端不直接渲染。" },
+          "missingDataItems": { "type": "array", "items": { "type": "string" }, "description": "业务化缺失数据项，前端可展示。" },
+          "abnormalFields": { "type": "array", "items": { "type": "string" }, "description": "异常字段。" }
+        },
+        "required": ["schemaVersion", "entUid", "entName", "profileItems", "missingFields", "missingDataItems", "abnormalFields"]
+      },
+      "ProfileItem": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "业务名称。" },
+          "value": { "type": "string", "nullable": true, "description": "值。" },
+          "unit": { "type": "string", "nullable": true, "description": "单位。" },
+          "status": { "type": "string", "description": "业务数据状态，如 已核验/已获取/待补充。" },
+          "source": { "type": "string", "description": "业务数据来源，如 工商登记信息/企业补充信息/待补充。" },
+          "updatedAt": { "type": "integer", "format": "int64", "nullable": true, "description": "更新时间，epoch 毫秒。" }
+        },
+        "required": ["name", "status", "source"]
+      },
+      "EnterpriseIndicatorValue": {
+        "type": "object",
+        "description": "企业指标值（内部字段，前端不直接渲染）。",
+        "properties": {
+          "fieldName": { "type": "string", "description": "内部字段名。" },
+          "fieldValue": { "type": "string", "nullable": true },
+          "valueType": { "type": "string", "nullable": true, "description": "缺失时为 `unknown`。" },
+          "unit": { "type": "string", "nullable": true },
+          "sourceType": { "type": "string", "nullable": true, "description": "如 financial_ent_basic/policy_enterprise_indicator/missing/derived。" },
+          "sourceRef": { "type": "string", "nullable": true },
+          "verifiedStatus": { "type": "string", "nullable": true },
+          "updatedAt": { "type": "integer", "format": "int64", "nullable": true, "description": "更新时间，epoch 毫秒。" }
+        }
+      },
+      "PolicyMatchContextResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PolicyMatchContext" } } }
+        ]
+      },
+      "PolicyMatchContext": {
+        "type": "object",
+        "description": "政策详情与项目条件。",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "policyId": { "type": "integer", "format": "int64", "example": 12 },
+          "title": { "type": "string", "example": "节能改造补贴" },
+          "titleFull": { "type": "string", "nullable": true, "description": "政策全称。" },
+          "documentNo": { "type": "string", "nullable": true, "description": "发文文号。" },
+          "issuingOrg": { "type": "string", "nullable": true, "description": "发布单位。" },
+          "region": { "type": "string", "nullable": true, "description": "地区。" },
+          "level": { "type": "string", "nullable": true, "description": "政策级别。" },
+          "policyAttribute": { "type": "string", "nullable": true, "description": "政策属性/支持方式。" },
+          "deadline": { "type": "integer", "format": "int64", "nullable": true, "description": "申报截止时间，epoch 毫秒；前端可计算剩余天数。" },
+          "materials": { "type": "string", "nullable": true, "description": "申报材料（文本）。" },
+          "process": { "type": "string", "nullable": true, "description": "办理流程（文本）。" },
+          "projects": { "type": "array", "items": { "$ref": "#/components/schemas/PolicyProjectItem" } }
+        },
+        "required": ["schemaVersion", "policyId", "title", "projects"]
+      },
+      "PolicyProjectItem": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "integer", "format": "int64", "example": 4 },
+          "projectName": { "type": "string", "example": "节能改造项目" },
+          "subjectType": { "type": "string", "nullable": true, "description": "主体类型，如 enterprise。" },
+          "groupsRelation": { "type": "string", "nullable": true, "description": "条件分组关系，如 OR。" },
+          "conditions": { "type": "array", "items": { "$ref": "#/components/schemas/PolicyConditionItem" } }
+        },
+        "required": ["projectId", "projectName", "conditions"]
+      },
+      "PolicyConditionItem": {
+        "type": "object",
+        "description": "申报条件。前端展示 `indicator`、`compare+fieldVal`、`conditionRole`、`sourceClause`；不展示 `fieldName/indicatorId/indicatorScore`。",
+        "properties": {
+          "indicatorId": { "type": "integer", "format": "int64", "nullable": true, "description": "内部标识，不展示。" },
+          "indicator": { "type": "string", "description": "指标名称（业务文案）。" },
+          "fieldName": { "type": "string", "nullable": true, "description": "内部字段名，不展示。" },
+          "compare": { "type": "string", "nullable": true, "description": "比较运算符，如 EQ/GTE 等。" },
+          "fieldVal": { "type": "string", "nullable": true, "description": "条件值/阈值。" },
+          "conditionRole": { "type": "string", "nullable": true, "description": "条件角色。", "enum": ["must", "optional"] },
+          "indicatorScore": { "type": "integer", "nullable": true, "description": "内部评分权重，不展示。" },
+          "sourceClause": { "type": "string", "nullable": true, "description": "政策原文依据。" },
+          "matchStatus": { "type": "string", "nullable": true, "description": "条件状态。", "enum": ["enabled", "manual_confirm", "disabled"] }
+        },
+        "required": ["indicator"]
+      },
+      "FindPoliciesForEnterpriseRequest": {
+        "type": "object",
+        "description": "企业找政策请求。仅 `entUid` 或 `enterpriseId` 为必填企业键；其余字段当前实时流程未实际应用。",
+        "properties": {
+          "entUid": { "type": "string", "nullable": true, "description": "企业标识（与 `enterpriseId` 二选一）。" },
+          "enterpriseId": { "type": "string", "nullable": true, "description": "企业标识（与 `entUid` 二选一）。" },
+          "entName": { "type": "string", "nullable": true },
+          "creditCode": { "type": "string", "nullable": true },
+          "policyAttribute": { "type": "string", "nullable": true, "description": "当前未应用。" },
+          "matchLevels": { "type": "array", "items": { "type": "string", "enum": ["high", "medium", "low", "none"] }, "nullable": true, "description": "当前未应用，前端按返回结果自行聚合。" },
+          "sort": { "type": "string", "nullable": true, "description": "当前未应用。" },
+          "pageNum": { "type": "integer", "nullable": true, "description": "当前未应用。" },
+          "pageSize": { "type": "integer", "nullable": true, "description": "当前未应用。" }
+        }
+      },
+      "FindEnterprisesForPolicyRequest": {
+        "type": "object",
+        "description": "政策找企业请求。",
+        "properties": {
+          "policyId": { "type": "integer", "format": "int64", "description": "政策 ID（必填）。", "example": 12 },
+          "projectId": { "type": "integer", "format": "int64", "nullable": true, "description": "项目 ID；切换项目时传对应值，不限定传 null。", "example": 4 },
+          "keyword": { "type": "string", "nullable": true, "description": "企业名称关键词，服务端筛选。" },
+          "matchLevels": { "type": "array", "items": { "type": "string", "enum": ["high", "medium", "low", "none"] }, "nullable": true, "description": "匹配等级筛选：high/medium/low，全部传三者。" },
+          "pageNum": { "type": "integer", "nullable": true, "example": 1 },
+          "pageSize": { "type": "integer", "nullable": true, "example": 20 }
+        },
+        "required": ["policyId"]
+      },
+      "MatchListResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MatchList" } } }
+        ]
+      },
+      "MatchList": {
+        "type": "object",
+        "description": "匹配结果列表。空结果时 `items=[]` 且 `message` 给出业务化空态文案。",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "analysisId": { "type": "string", "nullable": true, "description": "分析批次 ID（企业找政策返回）。" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/MatchItem" } },
+          "message": { "type": "string", "nullable": true, "description": "空态业务文案。" }
+        },
+        "required": ["schemaVersion", "items"]
+      },
+      "MatchItem": {
+        "type": "object",
+        "description": "一条“企业 + 政策 + 项目”匹配结果。注意：政策找企业接口返回时四态计数为 null、`mainEvidenceSummary` 为空数组；企业找政策接口返回时四态计数与主证据摘要有值。",
+        "properties": {
+          "matchId": { "type": "string", "description": "匹配结果标识。" },
+          "policyId": { "type": "integer", "format": "int64" },
+          "projectId": { "type": "integer", "format": "int64" },
+          "policyTitle": { "type": "string" },
+          "projectName": { "type": "string" },
+          "entUid": { "type": "string", "description": "企业标识。" },
+          "entName": { "type": "string", "nullable": true, "description": "企业名称（政策找企业返回，企业找政策可能为 null）。" },
+          "score": { "type": "number", "format": "double", "nullable": true, "description": "匹配分。" },
+          "matchLevel": { "type": "string", "nullable": true, "description": "匹配等级。", "enum": ["high", "medium", "low", "none"] },
+          "eligibilityStatus": { "type": "string", "nullable": true, "description": "准入状态。", "enum": ["eligible", "need_confirmation", "not_eligible"] },
+          "confidence": { "type": "number", "format": "double", "nullable": true, "description": "置信度。" },
+          "satisfiedCount": { "type": "integer", "nullable": true, "description": "已满足条件数。" },
+          "unsatisfiedCount": { "type": "integer", "nullable": true, "description": "明确不满足条件数。" },
+          "unknownCount": { "type": "integer", "nullable": true, "description": "待补充或待确认条件数。" },
+          "notApplicableCount": { "type": "integer", "nullable": true, "description": "不适用条件数。" },
+          "mainEvidenceSummary": { "type": "array", "items": { "type": "string" }, "description": "主证据摘要（前 5 条）。" }
+        },
+        "required": ["matchId", "policyId", "projectId", "policyTitle", "projectName", "entUid"]
+      },
+      "MatchEvidenceResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MatchEvidence" } } }
+        ]
+      },
+      "MatchEvidence": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "matchId": { "type": "string" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PolicyMatchEvidence" } }
+        },
+        "required": ["schemaVersion", "matchId", "items"]
+      },
+      "MatchGapsResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MatchGaps" } } }
+        ]
+      },
+      "MatchGaps": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "matchId": { "type": "string" },
+          "missingData": { "type": "array", "items": { "$ref": "#/components/schemas/PolicyMatchEvidence" }, "description": "`evidenceStatus=unknown` 的证据。" },
+          "unsatisfied": { "type": "array", "items": { "$ref": "#/components/schemas/PolicyMatchEvidence" }, "description": "`evidenceStatus=unsatisfied` 的证据。" },
+          "materials": { "type": "array", "items": { "type": "string" }, "description": "材料准备提示（通用，非正式材料清单）。" }
+        },
+        "required": ["schemaVersion", "matchId", "missingData", "unsatisfied", "materials"]
+      },
+      "PolicyMatchEvidence": {
+        "type": "object",
+        "description": "单条条件证据。前端按 `evidenceStatus` 分组；`fieldName/indicatorId` 为内部字段不展示。",
+        "properties": {
+          "id": { "type": "integer", "format": "int64", "nullable": true, "description": "内部主键。" },
+          "matchId": { "type": "string", "nullable": true },
+          "indicatorId": { "type": "integer", "format": "int64", "nullable": true, "description": "内部标识，不展示。" },
+          "evidenceStatus": { "type": "string", "description": "四态证据状态。", "enum": ["satisfied", "unsatisfied", "unknown", "not_applicable"] },
+          "enterpriseValue": { "type": "string", "nullable": true, "description": "企业实际值。" },
+          "policyValue": { "type": "string", "nullable": true, "description": "政策要求值。" },
+          "scoreWeight": { "type": "number", "format": "double", "nullable": true, "description": "权重。" },
+          "scoreObtained": { "type": "number", "format": "double", "nullable": true, "description": "得分。" },
+          "dataSource": { "type": "string", "nullable": true, "description": "数据来源。" },
+          "dataTime": { "type": "integer", "format": "int64", "nullable": true, "description": "数据时间，epoch 毫秒。" },
+          "reason": { "type": "string", "nullable": true, "description": "判定原因。" },
+          "createdAt": { "type": "integer", "format": "int64", "nullable": true, "description": "创建时间，epoch 毫秒。" },
+          "fieldName": { "type": "string", "nullable": true, "description": "内部字段名，不展示。" },
+          "compare": { "type": "string", "nullable": true, "description": "比较运算符。" },
+          "indicator": { "type": "string", "nullable": true, "description": "指标名称（业务文案）。" }
+        },
+        "required": ["evidenceStatus"]
+      },
+      "AiInteractionLogRequest": {
+        "type": "object",
+        "description": "AI 交互日志（补充接口，对接文档未列入前端必接）。",
+        "properties": {
+          "sessionId": { "type": "string", "nullable": true },
+          "pageType": { "type": "string", "nullable": true },
+          "policyId": { "type": "integer", "format": "int64", "nullable": true },
+          "entUid": { "type": "string", "nullable": true },
+          "questionCategory": { "type": "string", "nullable": true },
+          "resultStatus": { "type": "string", "nullable": true }
+        }
+      },
+      "BooleanResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "type": "boolean", "nullable": true } } }
+        ]
+      }
+    },
+    "parameters": {
+      "PolicyCopilotServiceTokenHeader": {
+        "name": "X-Policy-Copilot-Service-Token",
+        "in": "header",
+        "required": false,
+        "schema": { "type": "string" },
+        "description": "MCP server 到 Java 的服务间调用凭证（仅服务间使用，浏览器/前端不携带）。本期前端联调阶段免鉴权，前端调用无需此头。"
+      }
+    }
+  }
+}

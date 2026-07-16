@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Building2, FileText, Search } from "lucide-react"
+import { $api } from "@/api/client"
+import { getPolicyDeadlineStatus } from "@/lib/policy"
 import {
   PolicyListDialog,
   EnterpriseListDialog,
@@ -22,9 +24,36 @@ export const Route = createFileRoute("/")({
 // ---- Mock Data ----
 
 const kpiData = [
-  { icon: FileText, label: "覆盖政策数", value: "84", unit: "条", badge: "查看清单", iconBg: "bg-blue-50", iconColor: "text-primary", dialog: "policy" as const },
-  { icon: Building2, label: "已服务企业数", value: "326", unit: "家", badge: "查看名单", iconBg: "bg-green-50", iconColor: "text-match-high", dialog: "enterprise" as const },
-  { icon: Search, label: "累计匹配分析", value: "186", unit: "次", badge: "查看分布", iconBg: "bg-purple-50", iconColor: "text-purple-500", dialog: "match" as const },
+  {
+    icon: FileText,
+    label: "覆盖政策数",
+    value: "84",
+    unit: "条",
+    badge: "查看清单",
+    iconBg: "bg-blue-50",
+    iconColor: "text-primary",
+    dialog: "policy" as const,
+  },
+  {
+    icon: Building2,
+    label: "已服务企业数",
+    value: "326",
+    unit: "家",
+    badge: "查看名单",
+    iconBg: "bg-green-50",
+    iconColor: "text-match-high",
+    dialog: "enterprise" as const,
+  },
+  {
+    icon: Search,
+    label: "累计匹配分析",
+    value: "186",
+    unit: "次",
+    badge: "查看分布",
+    iconBg: "bg-purple-50",
+    iconColor: "text-purple-500",
+    dialog: "match" as const,
+  },
 ]
 
 const coverageData = [
@@ -57,29 +86,26 @@ const coverageData = [
   },
 ] as const
 
-const policyList = [
-  { name: "泉州市高质量发展支持企业技术改造专项", type: "技改类", count: 14, status: "ending" as const },
-  { name: "泉州市专精特新中小企业梯度培育计划", type: "培育类", count: 9, status: "active" as const },
-  { name: "南安市高新技术企业培育奖励政策", type: "高企培育", count: 16, status: "closed" as const },
-]
-
 const enterpriseList = [
-  { name: "泉州南安智能装备有限公司", node: "轴承", policyCount: 3, status: "培育中" as const },
-  { name: "福建蓝田新材料科技有限公司", node: "数控机床", policyCount: 2, status: "培育中" as const },
-  { name: "泉州科能精密制造有限公司", node: "纺织机械", policyCount: 5, status: "未培育" as const },
+  {
+    name: "泉州南安智能装备有限公司",
+    node: "轴承",
+    policyCount: 3,
+    status: "培育中" as const,
+  },
+  {
+    name: "福建蓝田新材料科技有限公司",
+    node: "数控机床",
+    policyCount: 2,
+    status: "培育中" as const,
+  },
+  {
+    name: "泉州科能精密制造有限公司",
+    node: "纺织机械",
+    policyCount: 5,
+    status: "未培育" as const,
+  },
 ]
-
-const statusBadge = {
-  ending: "bg-warning/10 text-warning border border-warning/20",
-  active: "bg-success/10 text-success border border-success/20",
-  closed: "bg-muted text-muted-foreground border border-border",
-}
-
-const statusLabel = {
-  ending: "7天内截止",
-  active: "申报中",
-  closed: "已结束",
-}
 
 const enterpriseStatusBadge = (status: string) =>
   status === "未培育"
@@ -89,7 +115,29 @@ const enterpriseStatusBadge = (status: string) =>
 // ---- Component ----
 
 function HomeComponent() {
-  const [dialog, setDialog] = useState<"policy" | "enterprise" | "match" | null>(null)
+  const [dialog, setDialog] = useState<
+    "policy" | "enterprise" | "match" | null
+  >(null)
+  const dashboardQuery = $api.useQuery(
+    "get",
+    "/api/policy-copilot/v1/dashboard/summary",
+    undefined,
+    { staleTime: 30_000 }
+  )
+  const dashboardResponse = dashboardQuery.data
+  const dashboardSummary =
+    dashboardResponse?.code === 200 ? dashboardResponse.data : undefined
+  const dashboardError = dashboardQuery.error
+    ? "首页概览加载失败，请稍后重试"
+    : dashboardResponse && dashboardResponse.code !== 200
+      ? dashboardResponse.msg
+      : null
+  const policyList = dashboardSummary?.topPolicies ?? []
+  const kpiValues = [
+    dashboardSummary?.kpis.activePolicyCount,
+    dashboardSummary?.kpis.servedEnterpriseCount,
+    dashboardSummary?.kpis.matchAnalysisCount,
+  ]
 
   return (
     <div className="flex flex-col gap-4">
@@ -103,35 +151,53 @@ function HomeComponent() {
           园区政策服务总览
         </h2>
 
+        {dashboardError && (
+          <p className="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {dashboardError}
+          </p>
+        )}
+
         <div className="grid grid-cols-3 gap-4">
-          {kpiData.map((kpi) => (
-            <div
-              key={kpi.label}
-              className="relative flex min-h-[96px] flex-col justify-between overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm"
-            >
-              <div className="flex items-center gap-2 text-[13px] font-bold text-muted-foreground">
-                <span className={`flex size-8 items-center justify-center rounded-lg ${kpi.iconBg} ${kpi.iconColor}`}>
-                  <kpi.icon className="size-4" />
-                </span>
-                {kpi.label}
-              </div>
-              <div className="mt-1.5">
-                <div className="flex items-baseline gap-2 text-[30px] font-extrabold text-primary">
-                  {kpi.value}
-                  <span className="text-sm font-normal text-muted-foreground">{kpi.unit}</span>
-                  <button
-                    type="button"
-                    className="ml-1.5 inline-flex cursor-pointer items-center rounded-full border border-primary/30 bg-accent px-2 py-0.5 text-xs font-bold text-primary outline-0 transition-colors hover:bg-primary/10 hover:border-primary/50 focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 [&:focus-visible]:[outline-style:none]"
-                    onClick={() => setDialog(kpi.dialog)}
+          {kpiData.map((kpi, index) => {
+            const value = kpiValues[index]
+            const displayValue =
+              dashboardQuery.isPending || value === undefined ? "--" : value
+
+            return (
+              <div
+                key={kpi.label}
+                className="relative flex min-h-[96px] flex-col justify-between overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-[13px] font-bold text-muted-foreground">
+                  <span
+                    className={`flex size-8 items-center justify-center rounded-lg ${kpi.iconBg} ${kpi.iconColor}`}
                   >
-                    {kpi.badge}
-                  </button>
+                    <kpi.icon className="size-4" />
+                  </span>
+                  {kpi.label}
                 </div>
+                <div className="mt-1.5">
+                  <div className="flex items-baseline gap-2 text-[30px] font-extrabold text-primary">
+                    {displayValue}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {kpi.unit}
+                    </span>
+                    {kpi.dialog === "policy" && (
+                      <button
+                        type="button"
+                        className="ml-1.5 inline-flex cursor-pointer items-center rounded-full border border-primary/30 bg-accent px-2 py-0.5 text-xs font-bold text-primary outline-0 transition-colors hover:border-primary/50 hover:bg-primary/10 focus:outline-0 focus-visible:ring-0 focus-visible:outline-0 [&:focus-visible]:[outline-style:none]"
+                        onClick={() => setDialog(kpi.dialog)}
+                      >
+                        {kpi.badge}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* 装饰性背景圆 */}
+                <div className="pointer-events-none absolute -right-6 -bottom-[30px] size-[76px] rounded-full bg-muted/50" />
               </div>
-              {/* 装饰性背景圆 */}
-              <div className="pointer-events-none absolute -bottom-[30px] -right-6 size-[76px] rounded-full bg-muted/50" />
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
@@ -162,7 +228,7 @@ function HomeComponent() {
                   ?
                 </span>
               </span>
-              <span className="text-[40px] font-black leading-none -tracking-wider text-primary">
+              <span className="text-[40px] leading-none font-black -tracking-wider text-primary">
                 67%
               </span>
             </div>
@@ -172,17 +238,26 @@ function HomeComponent() {
               {coverageData.map((item) => (
                 <div key={item.name}>
                   <div className="grid grid-cols-[82px_1fr_46px] items-center gap-2.5">
-                    <span className="text-[13px] font-extrabold leading-tight text-foreground">
+                    <span className="text-[13px] leading-tight font-extrabold text-foreground">
                       {item.name}
                       <br />
-                      <span className="text-[11px] text-muted-foreground">{item.sub}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {item.sub}
+                      </span>
                     </span>
                     <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                      <div
+                        className={`h-full rounded-full ${item.color}`}
+                        style={{ width: `${item.pct}%` }}
+                      />
                     </div>
-                    <span className={`text-sm font-black text-right ${item.textColor}`}>{item.pct}%</span>
+                    <span
+                      className={`text-right text-sm font-black ${item.textColor}`}
+                    >
+                      {item.pct}%
+                    </span>
                   </div>
-                  <div className="ml-[92px] mt-1 mb-0.5 flex flex-wrap gap-1.5">
+                  <div className="mt-1 mb-0.5 ml-[92px] flex flex-wrap gap-1.5">
                     {item.tags.map((tag) => (
                       <span
                         key={tag}
@@ -221,54 +296,100 @@ function HomeComponent() {
                 <table className="w-full table-fixed text-[13px]">
                   <thead>
                     <tr className="bg-muted/50 text-muted-foreground">
-                      <th className="px-2.5 py-2 text-left font-extrabold" style={{ width: "43%" }}>
+                      <th
+                        className="px-2.5 py-2 text-left font-extrabold"
+                        style={{ width: "43%" }}
+                      >
                         政策名称
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "17%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "20%" }}
+                      >
                         政策类型
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "16%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "20%" }}
+                      >
                         高匹配企业数
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "13%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "17%" }}
+                      >
                         状态
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "11%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "17%" }}
+                      >
                         操作
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {policyList.map((p) => (
-                      <tr key={p.name} className="text-foreground hover:bg-accent/50">
-                        <td className="truncate px-2.5 py-2.5 font-extrabold text-foreground">{p.name}</td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <span className="inline-block rounded-sm bg-success/10 px-2 py-0.5 text-xs font-bold text-success border border-success/20">
-                            {p.type}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <span className="cursor-pointer text-[15px] font-black text-primary hover:underline">
-                            {p.count} 家
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <span
-                            className={`inline-flex min-w-[60px] items-center justify-center rounded-full px-2 py-0.5 text-xs font-extrabold ${statusBadge[p.status]}`}
-                          >
-                            {statusLabel[p.status]}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <Link
-                            to="/policy"
-                            className="inline-block rounded-md border border-primary/25 bg-card px-2.5 py-1 text-[11px] font-extrabold text-primary transition-colors hover:bg-accent hover:text-primary"
-                          >
-                            查看
-                          </Link>
+                    {dashboardQuery.isPending ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-2.5 py-6 text-center text-muted-foreground"
+                        >
+                          加载中...
                         </td>
                       </tr>
-                    ))}
+                    ) : policyList.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-2.5 py-6 text-center text-muted-foreground"
+                        >
+                          暂无重点政策
+                        </td>
+                      </tr>
+                    ) : (
+                      policyList.map((p) => {
+                        const deadlineStatus = getPolicyDeadlineStatus(
+                          p.deadline
+                        )
+
+                        return (
+                          <tr
+                            key={p.policyId}
+                            className="text-foreground hover:bg-accent/50"
+                          >
+                            <td className="truncate px-2.5 py-2.5 font-extrabold text-foreground">
+                              {p.title}
+                            </td>
+                            <td className="px-2.5 py-2.5 text-center">
+                              <span className="inline-block rounded-sm border border-success/20 bg-success/10 px-2 py-0.5 text-xs font-bold text-success">
+                                {p.policyAttribute ?? "--"}
+                              </span>
+                            </td>
+                            <td className="px-2.5 py-2.5 text-center">
+                              <span className="text-[15px] font-black text-muted-foreground">
+                                --
+                              </span>
+                            </td>
+                            <td className="px-2.5 py-2.5 text-center">
+                              <span
+                                className={`inline-flex min-w-[60px] items-center justify-center rounded-full px-2 py-0.5 text-xs font-extrabold ${deadlineStatus.className}`}
+                              >
+                                {deadlineStatus.label}
+                              </span>
+                            </td>
+                            <td className="px-2.5 py-2.5 text-center">
+                              <Link
+                                to="/policy"
+                                className="inline-block rounded-md border border-primary/25 bg-card px-2.5 py-1 text-[11px] font-extrabold text-primary transition-colors hover:bg-accent hover:text-primary"
+                              >
+                                查看
+                              </Link>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -290,29 +411,49 @@ function HomeComponent() {
                 <table className="w-full table-fixed text-[13px]">
                   <thead>
                     <tr className="bg-muted/50 text-muted-foreground">
-                      <th className="px-2.5 py-2 text-left font-extrabold" style={{ width: "43%" }}>
+                      <th
+                        className="px-2.5 py-2 text-left font-extrabold"
+                        style={{ width: "43%" }}
+                      >
                         企业名称
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "18%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "18%" }}
+                      >
                         所属节点
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "17%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "17%" }}
+                      >
                         高匹配政策数
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "12%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "12%" }}
+                      >
                         状态
                       </th>
-                      <th className="px-2.5 py-2 text-center font-extrabold" style={{ width: "10%" }}>
+                      <th
+                        className="px-2.5 py-2 text-center font-extrabold"
+                        style={{ width: "10%" }}
+                      >
                         操作
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {enterpriseList.map((e) => (
-                      <tr key={e.name} className="text-foreground hover:bg-accent/50">
-                        <td className="truncate px-2.5 py-2.5 font-extrabold text-foreground">{e.name}</td>
+                      <tr
+                        key={e.name}
+                        className="text-foreground hover:bg-accent/50"
+                      >
+                        <td className="truncate px-2.5 py-2.5 font-extrabold text-foreground">
+                          {e.name}
+                        </td>
                         <td className="px-2.5 py-2.5 text-center">
-                          <span className="inline-block rounded-sm bg-accent px-2 py-0.5 text-xs font-bold text-primary border border-primary/20">
+                          <span className="inline-block rounded-sm border border-primary/20 bg-accent px-2 py-0.5 text-xs font-bold text-primary">
                             {e.node}
                           </span>
                         </td>
@@ -351,6 +492,7 @@ function HomeComponent() {
        * ================================================================ */}
       <PolicyListDialog
         open={dialog === "policy"}
+        policies={dashboardSummary?.topPolicies ?? []}
         onOpenChange={(open) => {
           if (!open) setDialog(null)
         }}
