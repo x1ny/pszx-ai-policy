@@ -280,7 +280,11 @@ function PolicyPage() {
                         />
                       </TableCell>
                       <TableCell className="py-3">
-                        <Link to="/enterprise" className="font-extrabold text-foreground hover:text-primary hover:underline">
+                        <Link
+                          to="/enterprise"
+                          search={{ enterpriseId: row.entUid }}
+                          className="font-extrabold text-foreground hover:text-primary hover:underline"
+                        >
                           {row.name}
                         </Link>
                       </TableCell>
@@ -315,6 +319,7 @@ function PolicyPage() {
                       <TableCell className="py-3 text-center">
                         <Link
                           to="/enterprise"
+                          search={{ enterpriseId: row.entUid }}
                           className="rounded-md border border-primary/20 bg-accent px-2 py-1.5 text-xs font-extrabold text-primary transition-colors hover:bg-primary/10"
                         >
                           查看详情

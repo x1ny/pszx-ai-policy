@@ -1,12 +1,16 @@
 import { useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft, Check } from "lucide-react"
+import { $api } from "@/api/client"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
 
 export const Route = createFileRoute("/enterprise")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    enterpriseId: String(search.enterpriseId ?? "54D74B0EF5F211E39186ED1292A4829C"),
+  }),
   component: EnterprisePage,
 })
 
@@ -113,6 +117,10 @@ const policyRows = [
   },
 ]
 
+void company
+void matchOverview
+void policyRows
+
 const matchColorMap = {
   high: { text: "text-success", bar: "bg-success", label: "高匹配", indicator: "[&_[data-slot=progress-indicator]]:bg-success" },
   mid: { text: "text-warning", bar: "bg-warning", label: "中匹配", indicator: "[&_[data-slot=progress-indicator]]:bg-warning" },
@@ -169,8 +177,64 @@ const phases = [
 // ---- Component ----
 
 function EnterprisePage() {
+  const { enterpriseId } = Route.useSearch()
   const [filter, setFilter] = useState<"all" | "high" | "mid" | "low">("all")
   const [policyType, setPolicyType] = useState("全部")
+
+  const contextQuery = $api.useQuery(
+    "get",
+    "/api/policy-copilot/v1/enterprises/{entUid}/context",
+    { params: { path: { entUid: enterpriseId } } },
+  )
+  const matchQuery = $api.useQuery(
+    "post",
+    "/api/policy-copilot/v1/matches/policies-by-enterprise",
+    { body: { enterpriseId } },
+  )
+  const context = contextQuery.data?.data
+  const matchItems = matchQuery.data?.data?.items ?? []
+  const display = (value: unknown): string =>
+    value === null || value === undefined || value === "" ? "-" : String(value)
+  const profileValue = (name: string) => {
+    const item = context?.profileItems?.find((profile) => profile.name === name)
+    return item?.value || "-"
+  }
+  const company = {
+    name: context?.entName,
+    creditCode: context?.creditCode,
+    province: context?.province,
+    city: context?.city,
+    industry: context?.industryCategory,
+    founded: profileValue("成立年限"),
+    capital: null,
+    scale: profileValue("企业规模"),
+    status: "培育中",
+  }
+  const matchOverview = [
+    { label: "高匹配政策", count: matchItems.filter((item) => item.matchLevel === "high").length, color: "text-success" },
+    { label: "中匹配政策", count: matchItems.filter((item) => item.matchLevel === "medium").length, color: "text-warning" },
+    { label: "低匹配政策", count: matchItems.filter((item) => item.matchLevel === "low").length, color: "text-primary" },
+  ]
+  const policyRows = matchItems.map((item) => {
+    const matchLevel = item.matchLevel === "medium" ? "mid" : item.matchLevel === "high" ? "high" : "low"
+    return {
+      matchId: item.matchId,
+      name: item.policyTitle,
+      type: "-",
+      tags: [item.projectName],
+      tagStyles: ["bg-accent text-primary border border-primary/20"],
+      deadline: "-",
+      deadlineUrgent: false,
+      match: item.score ?? 0,
+      matchLevel: matchLevel as "high" | "mid" | "low",
+      matched: [
+        `已满足条件：${item.satisfiedCount ?? "-"}项`,
+      ],
+      gaps: [
+        `待确认条件：${item.unknownCount ?? "-"}项`,
+      ],
+    }
+  })
 
   const filteredRows =
     filter === "all"
@@ -178,6 +242,14 @@ function EnterprisePage() {
       : policyRows.filter((r) => r.matchLevel === filter)
 
   const visibleCount = filteredRows.length
+
+  if (contextQuery.isPending || matchQuery.isPending) {
+    return <div className="flex flex-col gap-4 text-sm text-muted-foreground">加载中...</div>
+  }
+
+  if (contextQuery.isError || matchQuery.isError || !context || contextQuery.data?.code !== 200 || matchQuery.data?.code !== 200) {
+    return <div className="flex flex-col gap-4 text-sm text-muted-foreground">业务数据暂时无法获取，请稍后重试</div>
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -207,32 +279,32 @@ function EnterprisePage() {
           <div className="flex-1 space-y-3.5">
             <div className="flex items-center gap-3">
               <h2 className="text-[20px] font-black tracking-wide text-foreground">
-                {company.name}
+        {display(company.name)}
               </h2>
               <Badge variant="secondary" className="bg-accent text-primary border border-primary/20 rounded px-2.5 py-1 text-xs font-bold">
-                {company.status}
+                {display(company.status)}
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2.5 text-[13px]">
               <div className="flex gap-2">
                 <span className="shrink-0 text-muted-foreground">统一社会信用代码：</span>
-                <span className="font-medium text-foreground">{company.creditCode}</span>
+                <span className="font-medium text-foreground">{display(company.creditCode)}</span>
               </div>
               <div className="flex gap-2">
                 <span className="shrink-0 text-muted-foreground">所属行业：</span>
-                <span className="font-medium text-foreground">{company.industry}</span>
+                <span className="font-medium text-foreground">{display(company.industry)}</span>
               </div>
               <div className="flex gap-2">
                 <span className="shrink-0 text-muted-foreground">成立时间：</span>
-                <span className="font-medium text-foreground">{company.founded}</span>
+                <span className="font-medium text-foreground">{display(company.founded)}</span>
               </div>
               <div className="flex gap-2">
                 <span className="shrink-0 text-muted-foreground">注册资本：</span>
-                <span className="font-medium text-foreground">{company.capital}</span>
+                <span className="font-medium text-foreground">{display(company.capital)}</span>
               </div>
               <div className="col-span-2 flex gap-2">
                 <span className="shrink-0 text-muted-foreground">企业规模：</span>
-                <span className="font-medium text-foreground">{company.scale}</span>
+                <span className="font-medium text-foreground">{display(company.scale)}</span>
               </div>
             </div>
             <div className="pt-1">
@@ -309,7 +381,7 @@ function EnterprisePage() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
+              <div hidden className="flex items-center gap-2">
                 <span className="text-[13px] font-medium text-muted-foreground">政策类型：</span>
                 <select
                   className="w-32 cursor-pointer rounded border border-border bg-card px-2.5 py-1.5 text-[13px] font-medium text-foreground outline-none transition-colors focus:border-primary"
@@ -337,8 +409,14 @@ function EnterprisePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-border">
-                  {filteredRows.map((row) => (
-                    <TableRow key={row.name} className="hover:bg-accent/50">
+                  {filteredRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                        {matchQuery.data?.data?.message || "暂无匹配政策"}
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredRows.map((row) => (
+                    <TableRow key={row.matchId} className="hover:bg-accent/50">
                       <TableCell className="py-4">
                         <div className="flex items-start gap-3">
                           <div className={`mt-0.5 flex size-[36px] shrink-0 items-center justify-center rounded text-lg font-bold text-white shadow-sm ${matchColorMap[row.matchLevel].bar}`}>
