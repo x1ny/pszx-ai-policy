@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { ArrowLeft, Check } from "lucide-react"
 import { $api } from "@/api/client"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress"
 export const Route = createFileRoute("/policy")({
   validateSearch: (search: Record<string, unknown>) => ({
     policyId: Number(search.policyId ?? 12),
+    page: Math.max(1, Number(search.page ?? 1) || 1),
   }),
   component: PolicyPage,
 })
@@ -35,9 +36,11 @@ const matchColorMap = {
 // ---- Component ----
 
 function PolicyPage() {
-  const { policyId } = Route.useSearch()
+  const { policyId, page } = Route.useSearch()
+  const navigate = useNavigate({ from: "/policy" })
   const [activeTab, setActiveTab] = useState<"high" | "mid" | "low">("high")
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const pageSize = 5
 
   const policyQuery = $api.useQuery(
     "get",
@@ -55,8 +58,21 @@ function PolicyPage() {
         projectId: selectedProject?.projectId ?? null,
         keyword: null,
         matchLevels: [activeTab === "mid" ? "medium" : activeTab],
-        pageNum: 1,
-        pageSize: 20,
+        pageNum: page,
+        pageSize,
+      },
+      enabled: Boolean(policy),
+    },
+  )
+  const summaryQuery = $api.useQuery(
+    "get",
+    "/api/policy-copilot/v1/matches/enterprises-by-policy/summary",
+    {
+      params: {
+        query: {
+          policyId,
+          projectId: selectedProject?.projectId ?? null,
+        },
       },
       enabled: Boolean(policy),
     },
@@ -86,7 +102,19 @@ function PolicyPage() {
   const deadlineUrgent = daysLeft !== null && daysLeft <= 30
   const conditions = selectedProject?.conditions ?? []
   const supportText = policy?.materials || policy?.process || "-"
-  const matchCounts = { high: "-", mid: "-", low: "-" }
+  const matchStats = summaryQuery.data?.data
+  const matchCounts = {
+    high: matchStats?.highCount ?? "-",
+    mid: matchStats?.mediumCount ?? "-",
+    low: matchStats?.lowCount ?? "-",
+  }
+  const totalMatchCount = matchStats?.total ?? "-"
+  const listTotal = matchQuery.data?.data?.total ?? 0
+  const totalPages = Math.max(1, matchQuery.data?.data?.pages ?? (
+    listTotal
+      ? Math.ceil(listTotal / pageSize)
+      : 1
+  ))
   const matchEmptyMessage = matchQuery.data?.data?.message || "暂无匹配企业"
 
   const allSelected =
@@ -169,7 +197,7 @@ function PolicyPage() {
           </div>
           <div className="flex gap-6 rounded-lg border border-[#f3f4f6] bg-[#f9fafb80] px-4 py-2 text-center">
             {[
-              { label: "匹配企业总数", value: "-", color: "text-primary" },
+              { label: "匹配企业总数", value: totalMatchCount, color: "text-primary" },
               { label: "高匹配", value: matchCounts.high, color: "text-success" },
               { label: "中匹配", value: matchCounts.mid, color: "text-warning" },
               { label: "低匹配", value: matchCounts.low, color: "text-foreground" },
@@ -216,6 +244,7 @@ function PolicyPage() {
           onValueChange={(v) => {
             setActiveTab(v as "high" | "mid" | "low")
             setSelected(new Set())
+            void navigate({ search: (prev) => ({ ...prev, page: 1 }) })
           }}
           className="flex flex-col"
         >
@@ -227,7 +256,9 @@ function PolicyPage() {
                 className="flex-none px-2 py-4 text-base font-bold after:!bg-primary hover:text-primary data-active:text-primary"
               >
                 {tab.label}
-                <span className="ml-1 text-[11px] font-bold opacity-60">{tab.extra}</span>
+                <span className="ml-1 text-[11px] font-bold opacity-60">
+                  {tab.extra.split("|")[0]} | {matchCounts[tab.key]} 家
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -250,7 +281,7 @@ function PolicyPage() {
             </div>
 
             {/* 表格 */}
-            <div className="scrollbar-hidden max-h-[520px] overflow-auto">
+            <div>
               <Table className="min-w-[900px] text-[13px]">
                 <TableHeader>
                   <TableRow className="border-b border-border text-muted-foreground hover:bg-transparent">
@@ -330,6 +361,38 @@ function PolicyPage() {
                 </TableBody>
               </Table>
             </div>
+            {listTotal > 0 && (
+              <div className="flex items-center justify-between border-t border-border px-6 py-3 text-[13px] font-medium text-muted-foreground">
+                <span>
+                  {matchQuery.isPending
+                    ? "正在加载企业列表…"
+                    : `共 ${listTotal} 条企业`}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-label="上一页"
+                    disabled={page <= 1 || matchQuery.isFetching}
+                    onClick={() => void navigate({ search: (prev) => ({ ...prev, page: Math.max(1, page - 1) }) })}
+                    className="flex size-7 items-center justify-center rounded border border-border text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    ‹
+                  </button>
+                  <span className="min-w-20 text-center text-xs">
+                    第 {page} / {totalPages} 页
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="下一页"
+                    disabled={page >= totalPages || matchQuery.isFetching}
+                    onClick={() => void navigate({ search: (prev) => ({ ...prev, page: Math.min(totalPages, page + 1) }) })}
+                    className="flex size-7 items-center justify-center rounded border border-border text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

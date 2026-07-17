@@ -260,19 +260,39 @@
     },
     "/api/policy-copilot/v1/matches/enterprises-by-policy": {
       "post": {
-        "tags": ["Match"],
-        "summary": "政策找企业（读取最新预计算结果）",
-        "description": "对应对接文档 §6.4。读取该政策/项目最新匹配企业，不在请求路径全表扫描企业指标。切换项目传对应 `projectId`；切换高中低标签传 `matchLevels`（`high/medium/low`，全部传三者）。空结果时展示接口 `message`，不得自行展示静态企业名单。",
+        "tags": ["EnterprisesByPolicy"],
+        "summary": "政策找企业列表",
+        "description": "读取指定政策/项目的最新预计算匹配企业，支持匹配等级、企业名称关键词和分页。分页由后端 PageHelper 处理，返回 `total/pageNum/pageSize/pages/hasNext`。",
         "operationId": "findEnterprisesByPolicy",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/FindEnterprisesForPolicyRequest" },
+              "schema": {
+                "$ref": "#/components/schemas/FindEnterprisesForPolicyRequest"
+              },
               "examples": {
+                "allLevels": {
+                  "summary": "全部匹配等级",
+                  "value": {
+                    "policyId": 12,
+                    "projectId": null,
+                    "keyword": null,
+                    "matchLevels": ["high", "medium", "low"],
+                    "pageNum": 1,
+                    "pageSize": 20
+                  }
+                },
                 "highOnly": {
-                  "summary": "高匹配、项目 4",
-                  "value": { "policyId": 12, "projectId": 4, "keyword": null, "matchLevels": ["high"], "pageNum": 1, "pageSize": 20 }
+                  "summary": "高匹配、指定项目",
+                  "value": {
+                    "policyId": 12,
+                    "projectId": 4,
+                    "keyword": "测试",
+                    "matchLevels": ["high"],
+                    "pageNum": 1,
+                    "pageSize": 20
+                  }
                 }
               }
             }
@@ -280,10 +300,112 @@
         },
         "responses": {
           "200": {
-            "description": "匹配结果列表。`policyId` 为空时 `code=500`；空结果时 `items=[]` 且 `message=\"暂无最新匹配结果，请先执行企业找政策或后台预计算\"`。注意：该接口返回的 `MatchItem` 中四态计数（satisfiedCount 等）当前为 null、`mainEvidenceSummary` 为空数组。",
+            "description": "匹配结果列表。`policyId` 为空时 `code=500`；空结果时 `items=[]` 且 `message` 给出空态文案。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/MatchListResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/MatchListResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "正常返回",
+                    "value": {
+                      "code": 200,
+                      "msg": "操作成功",
+                      "data": {
+                        "schemaVersion": "1.0",
+                        "analysisId": null,
+                        "items": [
+                          {
+                            "matchId": "M2026071400010001",
+                            "policyId": 12,
+                            "projectId": 4,
+                            "policyTitle": "福建省工业重点节能改造和通用设备更新提标项目",
+                            "projectName": "节能改造项目",
+                            "entUid": "FE8464B635C5E5464B0CAFEEEE218822",
+                            "entName": "泉州市测试企业有限公司",
+                            "score": 72.5,
+                            "matchLevel": "medium",
+                            "eligibilityStatus": "need_confirmation",
+                            "confidence": 61.0,
+                            "satisfiedCount": null,
+                            "unsatisfiedCount": null,
+                            "unknownCount": null,
+                            "notApplicableCount": null,
+                            "mainEvidenceSummary": []
+                          }
+                        ],
+                        "total": 100,
+                        "pageNum": 1,
+                        "pageSize": 20,
+                        "pages": 5,
+                        "hasNext": true,
+                        "message": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy-copilot/v1/matches/enterprises-by-policy/summary": {
+      "get": {
+        "tags": ["EnterprisesByPolicy"],
+        "summary": "政策找企业统计",
+        "description": "统计指定政策/项目下最新预计算匹配结果的高、中、低匹配数量。该接口独立于列表分页，不接收 `pageNum/pageSize`。",
+        "operationId": "summarizeEnterprisesByPolicy",
+        "parameters": [
+          {
+            "name": "policyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "政策 ID。",
+            "example": 12
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "nullable": true
+            },
+            "description": "项目 ID；不传时统计该政策下全部项目。",
+            "example": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "匹配企业统计。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyEnterpriseMatchSummaryResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "正常返回",
+                    "value": {
+                      "code": 200,
+                      "msg": "操作成功",
+                      "data": {
+                        "schemaVersion": "1.0",
+                        "total": 100,
+                        "highCount": 20,
+                        "mediumCount": 50,
+                        "lowCount": 30
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -666,9 +788,14 @@
           "schemaVersion": { "type": "string", "example": "1.0" },
           "analysisId": { "type": "string", "nullable": true, "description": "分析批次 ID（企业找政策返回）。" },
           "items": { "type": "array", "items": { "$ref": "#/components/schemas/MatchItem" } },
+          "total": { "type": "integer", "format": "int64", "description": "政策找企业列表总记录数。" },
+          "pageNum": { "type": "integer", "description": "当前页码。" },
+          "pageSize": { "type": "integer", "description": "每页大小。" },
+          "pages": { "type": "integer", "description": "总页数。" },
+          "hasNext": { "type": "boolean", "description": "是否还有下一页。" },
           "message": { "type": "string", "nullable": true, "description": "空态业务文案。" }
         },
-        "required": ["schemaVersion", "items"]
+        "required": ["schemaVersion", "items", "total", "pageNum", "pageSize", "pages", "hasNext"]
       },
       "MatchItem": {
         "type": "object",
@@ -692,6 +819,24 @@
           "mainEvidenceSummary": { "type": "array", "items": { "type": "string" }, "description": "主证据摘要（前 5 条）。" }
         },
         "required": ["matchId", "policyId", "projectId", "policyTitle", "projectName", "entUid"]
+      },
+      "PolicyEnterpriseMatchSummaryResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ApiResponseEnvelope" },
+          { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/PolicyEnterpriseMatchSummary" } } }
+        ]
+      },
+      "PolicyEnterpriseMatchSummary": {
+        "type": "object",
+        "description": "政策找企业统计，不受列表分页影响。",
+        "properties": {
+          "schemaVersion": { "type": "string", "example": "1.0" },
+          "total": { "type": "integer", "format": "int64", "example": 100 },
+          "highCount": { "type": "integer", "format": "int64", "example": 20 },
+          "mediumCount": { "type": "integer", "format": "int64", "example": 50 },
+          "lowCount": { "type": "integer", "format": "int64", "example": 30 }
+        },
+        "required": ["schemaVersion", "total", "highCount", "mediumCount", "lowCount"]
       },
       "MatchEvidenceResponse": {
         "allOf": [

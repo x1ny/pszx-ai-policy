@@ -174,10 +174,30 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 政策找企业（读取最新预计算结果）
-         * @description 对应对接文档 §6.4。读取该政策/项目最新匹配企业，不在请求路径全表扫描企业指标。切换项目传对应 `projectId`；切换高中低标签传 `matchLevels`（`high/medium/low`，全部传三者）。空结果时展示接口 `message`，不得自行展示静态企业名单。
+         * 政策找企业列表
+         * @description 读取指定政策/项目的最新预计算匹配企业，支持匹配等级、企业名称关键词和分页。分页由后端 PageHelper 处理，返回 `total/pageNum/pageSize/pages/hasNext`。
          */
         post: operations["findEnterprisesByPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/policy-copilot/v1/matches/enterprises-by-policy/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 政策找企业统计
+         * @description 统计指定政策/项目下最新预计算匹配结果的高、中、低匹配数量。该接口独立于列表分页，不接收 `pageNum/pageSize`。
+         */
+        get: operations["summarizeEnterprisesByPolicy"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -600,6 +620,19 @@ export interface components {
             /** @description 分析批次 ID（企业找政策返回）。 */
             analysisId?: string | null;
             items: components["schemas"]["MatchItem"][];
+            /**
+             * Format: int64
+             * @description 政策找企业列表总记录数。
+             */
+            total: number;
+            /** @description 当前页码。 */
+            pageNum: number;
+            /** @description 每页大小。 */
+            pageSize: number;
+            /** @description 总页数。 */
+            pages: number;
+            /** @description 是否还有下一页。 */
+            hasNext: boolean;
             /** @description 空态业务文案。 */
             message?: string | null;
         };
@@ -647,6 +680,34 @@ export interface components {
             notApplicableCount?: number | null;
             /** @description 主证据摘要（前 5 条）。 */
             mainEvidenceSummary?: string[];
+        };
+        PolicyEnterpriseMatchSummaryResponse: components["schemas"]["ApiResponseEnvelope"] & {
+            data?: components["schemas"]["PolicyEnterpriseMatchSummary"];
+        };
+        /** @description 政策找企业统计，不受列表分页影响。 */
+        PolicyEnterpriseMatchSummary: {
+            /** @example 1.0 */
+            schemaVersion: string;
+            /**
+             * Format: int64
+             * @example 100
+             */
+            total: number;
+            /**
+             * Format: int64
+             * @example 20
+             */
+            highCount: number;
+            /**
+             * Format: int64
+             * @example 50
+             */
+            mediumCount: number;
+            /**
+             * Format: int64
+             * @example 30
+             */
+            lowCount: number;
         };
         MatchEvidenceResponse: components["schemas"]["ApiResponseEnvelope"] & {
             data?: components["schemas"]["MatchEvidence"];
@@ -970,13 +1031,44 @@ export interface operations {
             };
         };
         responses: {
-            /** @description 匹配结果列表。`policyId` 为空时 `code=500`；空结果时 `items=[]` 且 `message="暂无最新匹配结果，请先执行企业找政策或后台预计算"`。注意：该接口返回的 `MatchItem` 中四态计数（satisfiedCount 等）当前为 null、`mainEvidenceSummary` 为空数组。 */
+            /** @description 匹配结果列表。`policyId` 为空时 `code=500`；空结果时 `items=[]` 且 `message` 给出空态文案。 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["MatchListResponse"];
+                };
+            };
+        };
+    };
+    summarizeEnterprisesByPolicy: {
+        parameters: {
+            query: {
+                /**
+                 * @description 政策 ID。
+                 * @example 12
+                 */
+                policyId: number;
+                /**
+                 * @description 项目 ID；不传时统计该政策下全部项目。
+                 * @example 4
+                 */
+                projectId?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 匹配企业统计。 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyEnterpriseMatchSummaryResponse"];
                 };
             };
         };
