@@ -1,4 +1,4 @@
-import { Outlet, createRootRoute } from "@tanstack/react-router"
+import { Outlet, createRootRoute, useRouter } from "@tanstack/react-router"
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools"
 import { DashboardHeader } from "@/components/layout/dashboard-header"
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar"
@@ -8,6 +8,8 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const router = useRouter()
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-muted/40">
       <DashboardHeader />
@@ -17,7 +19,7 @@ function RootComponent() {
         </main>
         <DashboardSidebar />
       </div>
-      <TanStackRouterDevtools />
+      <TanStackRouterDevtools router={router as any} />
     </div>
   )
 }

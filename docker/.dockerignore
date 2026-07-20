@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+.git
+.gitignore
+.tanstack
+.vscode
+docs
+legacy-reference
+prototype
+*.log
+*.local
+

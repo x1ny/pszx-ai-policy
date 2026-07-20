@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsr generate && tsc -b && vite build",
+    "release": "node scripts/release.js",
+    "docker:build-push": "node scripts/build-push.js",
+    "deploy:test": "node scripts/deploy-test.js",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
