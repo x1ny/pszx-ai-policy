@@ -424,7 +424,7 @@ function PolicyPage() {
                   className="text-xs text-foreground hover:bg-accent/50"
                 >
                   <TableCell className="px-4 py-2.5 font-medium">{display(cond.indicator)}</TableCell>
-                  <TableCell className="px-4 py-2.5 text-muted-foreground">{display([cond.compare, cond.fieldVal].filter(Boolean).join(" "))}</TableCell>
+                  <TableCell className="px-4 py-2.5 text-muted-foreground">{display(cond.fieldVal)}</TableCell>
                   <TableCell className="px-4 py-2.5 text-center">
                     <Badge
                       variant="secondary"
