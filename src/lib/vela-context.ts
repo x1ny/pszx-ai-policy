@@ -1,4 +1,4 @@
-import type { PolicyPageContext } from "./vela-client"
+import type { PolicyPageContext } from "./agent-client"
 
 function optionalString(value: unknown) {
   if (typeof value === "string" && value.trim()) return value

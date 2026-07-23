@@ -17,10 +17,18 @@ export default defineConfig({
         target: "http://10.2.1.16:32096",
         changeOrigin: true,
       },
-      "/vela-api": {
+      "/login": {
+        target: "http://10.2.1.16:32096",
+        changeOrigin: true,
+      },
+      "/captchaImage": {
+        target: "http://10.2.1.16:32096",
+        changeOrigin: true,
+      },
+      "/vela": {
         target: "http://10.2.1.16:31119",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/vela-api/, "/api/v1"),
+        rewrite: (path) => path.replace(/^\/vela/, ""),
       },
     },
   },

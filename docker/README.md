@@ -49,4 +49,4 @@ docker run -d -p 80:80 \
   ps-docker-registry.cn-beijing.cr.aliyuncs.com/psdsframework/pszx-nanan-ai-policy:v0.1.0
 ```
 
-容器运行时由 Nginx 提供静态 SPA，并把 `/api/` 转发到 `API_URL`。`/health` 返回 `healthy`，QA 流式接口已关闭代理缓冲并设置长超时。
+容器运行时由 Nginx 提供静态 SPA：`/api/`、`/login`、`/captchaImage` 转发到 `API_URL`（业务 Java 后端），`/vela/` 转发到 `VELA_API_URL`（AI Agent 的 SSE 流和文件直传，浏览器直连 Vela，不经过 Java 后端）。`/health` 返回 `healthy`，`/api/` 和 `/vela/` 均已关闭代理缓冲并设置长超时，避免 SSE 被截断或攒批。

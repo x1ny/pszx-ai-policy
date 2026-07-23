@@ -11,14 +11,16 @@ import { useLocation } from "@tanstack/react-router"
 import { VelaMarkdownMessage } from "@/components/vela-markdown-message"
 import { useAutoScroll } from "@/hooks/use-auto-scroll"
 import {
-  createPolicyCopilotSession,
+  createAgentSession,
+  fetchCaptcha,
   getSessionMessages,
-  hasVelaToken,
-  loginToVela,
-  streamPolicyCopilot,
+  hasAgentToken,
+  loginWithCaptcha,
+  openAgentStream,
+  sendAgentMessage,
+  type AgentMessage,
   type AguiEvent,
-  type VelaMessage,
-} from "@/lib/vela-client"
+} from "@/lib/agent-client"
 import { buildPolicyPageContext } from "@/lib/vela-context"
 
 const suggestions = [
@@ -41,20 +43,30 @@ function getBusinessErrorMessage(event: AguiEvent) {
   return "服务请求失败，请稍后重试"
 }
 
+type AuthPhase = "idle" | "need_login" | "logging_in" | "ready"
+
 export function DashboardSidebar() {
   const location = useLocation()
   const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<VelaMessage[]>([])
+  const [messages, setMessages] = useState<AgentMessage[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [isLoggingIn, setIsLoggingIn] = useState(true)
   const [isStreaming, setIsStreaming] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [autoScrollResetKey, setAutoScrollResetKey] = useState(0)
+
+  const [authPhase, setAuthPhase] = useState<AuthPhase>("idle")
+  const [captcha, setCaptcha] = useState<{ img: string; uuid: string } | null>(null)
+  const [captchaCode, setCaptchaCode] = useState("")
+  const [captchaLoading, setCaptchaLoading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null)
+  const pendingContentRef = useRef<string | null>(null)
+
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const sessionRef = useRef<string | null>(null)
   const sessionPromiseRef = useRef<Promise<string> | null>(null)
   const assistantMessageIdRef = useRef<string | null>(null)
   const streamFailedRef = useRef(false)
+  const eventSourceRef = useRef<EventSource | null>(null)
 
   const messagesScrollKey = useMemo(
     () =>
@@ -71,28 +83,32 @@ export function DashboardSidebar() {
   })
 
   useEffect(() => {
-    let cancelled = false
-    void loginToVela()
-      .catch(() => {
-        if (!cancelled) setNotice("AI 服务暂不可用，发送消息时将重试")
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoggingIn(false)
-      })
-
     return () => {
-      cancelled = true
+      eventSourceRef.current?.close()
+    }
+  }, [])
+
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaLoading(true)
+    setCaptchaCode("")
+    try {
+      const res = await fetchCaptcha()
+      setCaptcha({ img: res.img, uuid: res.uuid })
+    } catch {
+      setLoginError("验证码加载失败，请重试")
+    } finally {
+      setCaptchaLoading(false)
     }
   }, [])
 
   const getOrCreateSession = useCallback(async () => {
     if (sessionRef.current) return sessionRef.current
     if (!sessionPromiseRef.current) {
-      sessionPromiseRef.current = createPolicyCopilotSession()
+      sessionPromiseRef.current = createAgentSession()
         .then((session) => {
-          sessionRef.current = session.session_id
-          setSessionId(session.session_id)
-          return session.session_id
+          sessionRef.current = session.id
+          setSessionId(session.id)
+          return session.id
         })
         .finally(() => {
           sessionPromiseRef.current = null
@@ -122,94 +138,109 @@ export function DashboardSidebar() {
     []
   )
 
-  const handleSubmit = useCallback(
+  const runChat = useCallback(
     async (content: string) => {
-      const trimmed = content.trim()
-      if (!trimmed || isStreaming) return
-
-      if (!hasVelaToken()) {
-        setNotice("AI 服务暂不可用，请稍后重试")
-        return
-      }
-
       const pageContext = buildPolicyPageContext(
         location.pathname,
         location.search as Record<string, unknown>
       )
-      const userMessage: VelaMessage = {
+      const userMessage: AgentMessage = {
         id: `user_${crypto.randomUUID()}`,
         role: "user",
-        content: trimmed,
+        content,
       }
 
-      setInput("")
       setNotice(null)
       setAutoScrollResetKey((current) => current + 1)
       setMessages((current) => [...current, userMessage])
       setIsStreaming(true)
       assistantMessageIdRef.current = null
       streamFailedRef.current = false
+      void pageContext // 页面上下文预留：后端接口目前不接受该字段，先构造好待接口支持后传入
 
       try {
         const currentSessionId = await getOrCreateSession()
-        await streamPolicyCopilot(
-          currentSessionId,
-          trimmed,
-          pageContext,
-          (event) => {
+        const turn = await sendAgentMessage(currentSessionId, content)
+
+        await new Promise<void>((resolve) => {
+          let settled = false
+          const finish = () => {
+            if (settled) return
+            settled = true
+            eventSourceRef.current?.close()
+            eventSourceRef.current = null
+            resolve()
+          }
+
+          openAgentStream(currentSessionId, turn.id, (event) => {
             switch (event.type) {
-              case "TEXT_MESSAGE_START":
-                {
-                  const assistantMessageId =
-                    event.messageId ||
-                    event.message_id ||
-                    `assistant_${crypto.randomUUID()}`
-                  assistantMessageIdRef.current = assistantMessageId
-                  setMessages((current) => {
-                    if (
-                      current.some(
-                        (message) => message.id === assistantMessageId
-                      )
-                    ) {
-                      return current
-                    }
-                    return [
-                      ...current,
-                      {
-                        id: assistantMessageId,
-                        role: "assistant",
-                        content: "",
-                      },
-                    ]
-                  })
-                }
+              case "TEXT_MESSAGE_START": {
+                const assistantMessageId =
+                  event.messageId ||
+                  event.message_id ||
+                  `assistant_${crypto.randomUUID()}`
+                assistantMessageIdRef.current = assistantMessageId
+                setMessages((current) => {
+                  if (current.some((message) => message.id === assistantMessageId)) {
+                    return current
+                  }
+                  return [
+                    ...current,
+                    { id: assistantMessageId, role: "assistant", content: "" },
+                  ]
+                })
                 break
+              }
               case "TEXT_MESSAGE_CONTENT":
                 appendAssistantDelta(
-                  typeof event.delta === "string" ? event.delta : "",
-                  typeof event.messageId === "string"
-                    ? event.messageId
-                    : undefined
+                  typeof event.delta === "string"
+                    ? event.delta
+                    : typeof event.content === "string"
+                      ? event.content
+                      : typeof event.text === "string"
+                        ? event.text
+                        : typeof event.message === "string"
+                          ? event.message
+                          : "",
+                  typeof event.messageId === "string" ? event.messageId : undefined
                 )
+                break
+              case "RUN_FINISHED":
+                finish()
                 break
               case "RUN_ERROR":
                 streamFailedRef.current = true
                 setNotice(getBusinessErrorMessage(event))
+                finish()
                 break
               default:
                 break
             }
-          }
-        )
+          })
+            .then((source) => {
+              eventSourceRef.current = source
+              source.onerror = () => {
+                streamFailedRef.current = true
+                setNotice("AI 连接已断开，请重试")
+                finish()
+              }
+            })
+            .catch(() => {
+              streamFailedRef.current = true
+              setNotice("服务请求失败，请稍后重试")
+              finish()
+            })
+        })
 
         if (!streamFailedRef.current) {
           const history = await getSessionMessages(currentSessionId)
-          setMessages(
-            history.filter(
-              (message) =>
-                message.role === "user" || message.role === "assistant"
+          if (history.length > 0) {
+            setMessages(
+              history.filter(
+                (message) => message.role === "user" || message.role === "assistant"
+              )
             )
-          )
+          }
         }
       } catch {
         setNotice("服务请求失败，请稍后重试")
@@ -218,19 +249,57 @@ export function DashboardSidebar() {
         assistantMessageIdRef.current = null
       }
     },
-    [
-      appendAssistantDelta,
-      getOrCreateSession,
-      isStreaming,
-      location.pathname,
-      location.search,
-    ]
+    [appendAssistantDelta, getOrCreateSession, location.pathname, location.search]
+  )
+
+  const handleSubmit = useCallback(
+    async (content: string) => {
+      const trimmed = content.trim()
+      if (!trimmed || isStreaming) return
+
+      if (!hasAgentToken()) {
+        pendingContentRef.current = trimmed
+        setLoginError(null)
+        setAuthPhase("need_login")
+        void loadCaptcha()
+        return
+      }
+
+      setInput("")
+      await runChat(trimmed)
+    },
+    [isStreaming, loadCaptcha, runChat]
+  )
+
+  const handleLoginSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (!captcha || !captchaCode.trim() || authPhase === "logging_in") return
+
+      setAuthPhase("logging_in")
+      setLoginError(null)
+      try {
+        await loginWithCaptcha(captchaCode.trim(), captcha.uuid)
+        setAuthPhase("ready")
+        setInput("")
+        const pending = pendingContentRef.current
+        pendingContentRef.current = null
+        if (pending) void runChat(pending)
+      } catch (error) {
+        setAuthPhase("need_login")
+        setLoginError(error instanceof Error ? error.message : "登录失败，请重试")
+        void loadCaptcha()
+      }
+    },
+    [authPhase, captcha, captchaCode, loadCaptcha, runChat]
   )
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     void handleSubmit(input)
   }
+
+  const showLogin = authPhase === "need_login" || authPhase === "logging_in"
 
   return (
     <aside className="flex w-80 shrink-0 flex-col gap-3 border-l border-border bg-gradient-to-b from-blue-50/80 to-blue-100/40 p-3.5">
@@ -284,87 +353,139 @@ export function DashboardSidebar() {
           <div className="flex items-center justify-between">
             <span className="text-primary">园区智能工作台</span>
             <span className="text-xs font-normal text-muted-foreground">
-              {isLoggingIn ? "连接中..." : sessionId ? "已连接" : "未开始对话"}
+              {showLogin ? "待验证" : sessionId ? "已连接" : "未开始对话"}
             </span>
           </div>
         </div>
 
-        <div
-          ref={messagesContainerRef}
-          className="flex flex-1 flex-col gap-4 overflow-y-auto bg-muted/30 p-4"
-        >
-          {notice && (
-            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs leading-relaxed text-destructive">
-              {notice}
+        {showLogin ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 overflow-y-auto bg-muted/30 p-4">
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              请输入验证码以启用 AI 助手
             </p>
-          )}
-
-          {messages.length === 0 ? (
-            <div className="max-w-[90%] self-start rounded-lg border border-border bg-card p-3 text-xs leading-relaxed shadow-sm">
-              <p>您好！我是您的政策匹配助手，可以基于当前页面数据快速分析：</p>
-              <div className="mt-2 flex flex-col gap-2">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => void handleSubmit(suggestion)}
-                    disabled={isStreaming}
-                    className="w-full rounded-xl border border-transparent bg-muted px-3 py-2 text-left text-xs text-primary transition-colors hover:border-primary hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`max-w-[90%] rounded-lg border p-3 text-xs leading-relaxed shadow-sm ${
-                  message.role === "user"
-                    ? "self-end border-primary/20 bg-primary text-primary-foreground"
-                    : "self-start border-border bg-card"
-                }`}
-              >
-                {message.role === "assistant" ? (
-                  <VelaMarkdownMessage content={message.content} />
-                ) : (
-                  message.content
-                )}
-              </div>
-            ))
-          )}
-
-          {isStreaming && (
-            <div className="max-w-[90%] self-start rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-              正在分析...
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-border bg-card p-4">
-          <form onSubmit={handleFormSubmit} className="relative">
-            <input
-              type="text"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder="请输入您的问题（支持回车）..."
-              disabled={isStreaming}
-              className="w-full rounded-md border border-input bg-background py-2 pr-9 pl-2.5 text-xs transition-colors outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isStreaming}
-              aria-label="发送消息"
-              className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer border-0 bg-transparent text-sm text-primary transition-colors disabled:cursor-not-allowed disabled:text-muted-foreground/40"
+            <form
+              onSubmit={handleLoginSubmit}
+              className="flex w-full flex-col gap-2.5 rounded-lg border border-border bg-card p-3 shadow-sm"
             >
-              ➤
-            </button>
-          </form>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground/60">
-            内容由AI生成，仅供参考
-          </p>
-        </div>
+              <button
+                type="button"
+                onClick={() => void loadCaptcha()}
+                disabled={captchaLoading}
+                className="flex h-10 items-center justify-center overflow-hidden rounded-md border border-input bg-background disabled:opacity-60"
+                title="点击刷新验证码"
+              >
+                {captcha ? (
+                  <img
+                    src={`data:image/jpeg;base64,${captcha.img}`}
+                    alt="验证码，点击刷新"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {captchaLoading ? "加载中..." : "加载失败，点击重试"}
+                  </span>
+                )}
+              </button>
+              <input
+                type="text"
+                value={captchaCode}
+                onChange={(event) => setCaptchaCode(event.target.value)}
+                placeholder="请输入验证码"
+                disabled={authPhase === "logging_in"}
+                className="w-full rounded-md border border-input bg-background px-2.5 py-2 text-xs outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              {loginError && (
+                <p className="text-xs leading-relaxed text-destructive">{loginError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={!captcha || !captchaCode.trim() || authPhase === "logging_in"}
+                className="w-full rounded-md bg-primary py-2 text-xs font-extrabold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {authPhase === "logging_in" ? "登录中..." : "登录并继续对话"}
+              </button>
+            </form>
+          </div>
+        ) : (
+          <>
+            <div
+              ref={messagesContainerRef}
+              className="flex flex-1 flex-col gap-4 overflow-y-auto bg-muted/30 p-4"
+            >
+              {notice && (
+                <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs leading-relaxed text-destructive">
+                  {notice}
+                </p>
+              )}
+
+              {messages.length === 0 ? (
+                <div className="max-w-[90%] self-start rounded-lg border border-border bg-card p-3 text-xs leading-relaxed shadow-sm">
+                  <p>您好！我是您的政策匹配助手，可以基于当前页面数据快速分析：</p>
+                  <div className="mt-2 flex flex-col gap-2">
+                    {suggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => void handleSubmit(suggestion)}
+                        disabled={isStreaming}
+                        className="w-full rounded-xl border border-transparent bg-muted px-3 py-2 text-left text-xs text-primary transition-colors hover:border-primary hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`max-w-[90%] rounded-lg border p-3 text-xs leading-relaxed shadow-sm ${
+                      message.role === "user"
+                        ? "self-end border-primary/20 bg-primary text-primary-foreground"
+                        : "self-start border-border bg-card"
+                    }`}
+                  >
+                    {message.role === "assistant" ? (
+                      <VelaMarkdownMessage content={message.content} />
+                    ) : (
+                      message.content
+                    )}
+                  </div>
+                ))
+              )}
+
+              {isStreaming && (
+                <div className="max-w-[90%] self-start rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+                  正在分析...
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-border bg-card p-4">
+              <form onSubmit={handleFormSubmit} className="relative">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(event) => setInput(event.target.value)}
+                  placeholder="请输入您的问题（支持回车）..."
+                  disabled={isStreaming}
+                  className="w-full rounded-md border border-input bg-background py-2 pr-9 pl-2.5 text-xs transition-colors outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isStreaming}
+                  aria-label="发送消息"
+                  className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer border-0 bg-transparent text-sm text-primary transition-colors disabled:cursor-not-allowed disabled:text-muted-foreground/40"
+                >
+                  ➤
+                </button>
+              </form>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground/60">
+                内容由AI生成，仅供参考
+              </p>
+            </div>
+          </>
+        )}
       </section>
     </aside>
   )
