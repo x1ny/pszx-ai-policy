@@ -56,11 +56,10 @@ const kpiData = [
   },
 ]
 
-const coverageData = [
+const coverageMeta = [
   {
     name: "上游",
     sub: "研发/原材料",
-    pct: 45,
     color: "bg-match-high",
     textColor: "text-match-high",
     tags: ["研发费用加计扣除", "技术创新"],
@@ -69,7 +68,6 @@ const coverageData = [
   {
     name: "中游",
     sub: "生产制造",
-    pct: 82,
     color: "bg-primary",
     textColor: "text-primary",
     tags: ["技术改造", "设备更新", "专精特新"],
@@ -78,39 +76,12 @@ const coverageData = [
   {
     name: "下游",
     sub: "应用/销售",
-    pct: 51,
     color: "bg-warning",
     textColor: "text-warning",
     tags: ["市场拓展", "应用推广"],
     tagBg: "bg-orange-50",
   },
 ] as const
-
-const enterpriseList = [
-  {
-    name: "泉州南安智能装备有限公司",
-    node: "轴承",
-    policyCount: 3,
-    status: "培育中" as const,
-  },
-  {
-    name: "福建蓝田新材料科技有限公司",
-    node: "数控机床",
-    policyCount: 2,
-    status: "培育中" as const,
-  },
-  {
-    name: "泉州科能精密制造有限公司",
-    node: "纺织机械",
-    policyCount: 5,
-    status: "未培育" as const,
-  },
-]
-
-const enterpriseStatusBadge = (status: string) =>
-  status === "未培育"
-    ? "bg-muted text-muted-foreground border border-border"
-    : "bg-accent text-primary border border-primary/20"
 
 // ---- Component ----
 
@@ -133,11 +104,29 @@ function HomeComponent() {
       ? dashboardResponse.msg
       : null
   const policyList = dashboardSummary?.topPolicies ?? []
+  const enterpriseList = dashboardSummary?.topEnterprises ?? []
   const kpiValues = [
     dashboardSummary?.kpis.activePolicyCount,
     dashboardSummary?.kpis.servedEnterpriseCount,
     dashboardSummary?.kpis.matchAnalysisCount,
   ]
+
+  const coverageQuery = $api.useQuery(
+    "get",
+    "/api/policy-copilot/v1/analysis/park-policy-match-rate",
+    undefined,
+    { staleTime: 30_000 }
+  )
+  const coverageResponse = coverageQuery.data
+  const coverageSummary =
+    coverageResponse?.code === 200 ? coverageResponse.data : undefined
+  const overallPct =
+    coverageSummary?.overall?.matchRate != null
+      ? Math.round(coverageSummary.overall.matchRate * 100)
+      : null
+  const segmentsByPosition = new Map(
+    (coverageSummary?.segments ?? []).map((s) => [s.chainPosition, s])
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -229,46 +218,52 @@ function HomeComponent() {
                 </span>
               </span>
               <span className="text-[40px] leading-none font-black -tracking-wider text-primary">
-                67%
+                {overallPct === null ? "--" : `${overallPct}%`}
               </span>
             </div>
 
             {/* 上中下游覆盖度柱状图 */}
             <div className="flex flex-col gap-1">
-              {coverageData.map((item) => (
-                <div key={item.name}>
-                  <div className="grid grid-cols-[82px_1fr_46px] items-center gap-2.5">
-                    <span className="text-[13px] leading-tight font-extrabold text-foreground">
-                      {item.name}
-                      <br />
-                      <span className="text-[11px] text-muted-foreground">
-                        {item.sub}
+              {coverageMeta.map((item) => {
+                const stat = segmentsByPosition.get(item.name)
+                const pct =
+                  stat?.matchRate != null ? Math.round(stat.matchRate * 100) : null
+
+                return (
+                  <div key={item.name}>
+                    <div className="grid grid-cols-[82px_1fr_46px] items-center gap-2.5">
+                      <span className="text-[13px] leading-tight font-extrabold text-foreground">
+                        {item.name}
+                        <br />
+                        <span className="text-[11px] text-muted-foreground">
+                          {item.sub}
+                        </span>
                       </span>
-                    </span>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full rounded-full ${item.color}`}
-                        style={{ width: `${item.pct}%` }}
-                      />
-                    </div>
-                    <span
-                      className={`text-right text-sm font-black ${item.textColor}`}
-                    >
-                      {item.pct}%
-                    </span>
-                  </div>
-                  <div className="mt-1 mb-0.5 ml-[92px] flex flex-wrap gap-1.5">
-                    {item.tags.map((tag) => (
+                      <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full rounded-full ${item.color}`}
+                          style={{ width: `${pct ?? 0}%` }}
+                        />
+                      </div>
                       <span
-                        key={tag}
-                        className={`rounded px-2 py-0.5 text-[11px] font-bold ${item.tagBg} ${item.textColor}`}
+                        className={`text-right text-sm font-black ${item.textColor}`}
                       >
-                        {tag}
+                        {pct === null ? "--" : `${pct}%`}
                       </span>
-                    ))}
+                    </div>
+                    <div className="mt-1 mb-0.5 ml-[92px] flex flex-wrap gap-1.5">
+                      {item.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`rounded px-2 py-0.5 text-[11px] font-bold ${item.tagBg} ${item.textColor}`}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             {/* AI 建议 */}
@@ -367,8 +362,8 @@ function HomeComponent() {
                               </span>
                             </td>
                             <td className="px-2.5 py-2.5 text-center">
-                              <span className="text-[15px] font-black text-muted-foreground">
-                                --
+                              <span className="text-[15px] font-black text-primary">
+                                {p.matchedEnterpriseCount ?? "--"}
                               </span>
                             </td>
                             <td className="px-2.5 py-2.5 text-center">
@@ -430,12 +425,14 @@ function HomeComponent() {
                       >
                         高匹配政策数
                       </th>
+                      {/* 状态列：后端暂不返回，先隐藏，不删代码，等接口补充后恢复
                       <th
                         className="px-2.5 py-2 text-center font-extrabold"
                         style={{ width: "12%" }}
                       >
                         状态
                       </th>
+                      */}
                       <th
                         className="px-2.5 py-2 text-center font-extrabold"
                         style={{ width: "10%" }}
@@ -445,42 +442,62 @@ function HomeComponent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {enterpriseList.map((e) => (
-                      <tr
-                        key={e.name}
-                        className="text-foreground hover:bg-accent/50"
-                      >
-                        <td className="truncate px-2.5 py-2.5 font-extrabold text-foreground">
-                          {e.name}
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <span className="inline-block rounded-sm border border-primary/20 bg-accent px-2 py-0.5 text-xs font-bold text-primary">
-                            {e.node}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <span className="cursor-pointer text-[15px] font-black text-primary hover:underline">
-                            {e.policyCount}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <span
-                            className={`inline-block rounded-sm px-2 py-0.5 text-xs font-bold ${enterpriseStatusBadge(e.status)}`}
-                          >
-                            {e.status}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2.5 text-center">
-                          <Link
-                            to="/enterprise"
-                            search={{ enterpriseId: "54D74B0EF5F211E39186ED1292A4829C" }}
-                            className="inline-block rounded-md border border-primary/25 bg-card px-2.5 py-1 text-[11px] font-extrabold text-primary transition-colors hover:bg-accent hover:text-primary"
-                          >
-                            查看详情
-                          </Link>
+                    {dashboardQuery.isPending ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-2.5 py-6 text-center text-muted-foreground"
+                        >
+                          加载中...
                         </td>
                       </tr>
-                    ))}
+                    ) : enterpriseList.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-2.5 py-6 text-center text-muted-foreground"
+                        >
+                          暂无重点企业
+                        </td>
+                      </tr>
+                    ) : (
+                      enterpriseList.map((e) => (
+                        <tr
+                          key={e.entUid}
+                          className="text-foreground hover:bg-accent/50"
+                        >
+                          <td className="truncate px-2.5 py-2.5 font-extrabold text-foreground">
+                            {e.entName}
+                          </td>
+                          <td className="px-2.5 py-2.5 text-center">
+                            <span className="inline-block rounded-sm border border-primary/20 bg-accent px-2 py-0.5 text-xs font-bold text-primary">
+                              {e.nodeName ?? "-"}
+                            </span>
+                          </td>
+                          <td className="px-2.5 py-2.5 text-center">
+                            <span className="cursor-pointer text-[15px] font-black text-primary hover:underline">
+                              {e.matchedPolicyCount ?? "-"}
+                            </span>
+                          </td>
+                          {/* 状态列：后端暂不返回，先隐藏，不删代码，等接口补充后恢复
+                          <td className="px-2.5 py-2.5 text-center">
+                            <span className="inline-block rounded-sm border border-border bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+                              -
+                            </span>
+                          </td>
+                          */}
+                          <td className="px-2.5 py-2.5 text-center">
+                            <Link
+                              to="/enterprise"
+                              search={{ enterpriseId: e.entUid }}
+                              className="inline-block rounded-md border border-primary/25 bg-card px-2.5 py-1 text-[11px] font-extrabold text-primary transition-colors hover:bg-accent hover:text-primary"
+                            >
+                              查看详情
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -12,10 +12,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 首页工作台概览
-         * @description 对应对接文档 §5.2。返回覆盖政策数、占位 KPI、重点政策列表等。`servedEnterpriseCount`、`matchAnalysisCount` 当前为占位值 0，前端按 `--` 或“统计建设中”展示。
+         * 服务工作台总览
+         * @description 返回 KPI、热门政策和企业找政策看板列表。topEnterprises 包含企业名称、所属节点和高匹配政策数。
          */
         get: operations["getDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/policy-copilot/v1/analysis/park-policy-match-rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 园区政策覆盖度
+         * @description 返回全园区和上游/中游/下游政策覆盖度。matchRate 为 0~1 小数，前端乘 100 展示百分比。
+         */
+        get: operations["getParkPolicyMatchRate"];
         put?: never;
         post?: never;
         delete?: never;
@@ -31,10 +51,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * 搜索企业
-         * @description 对应对接文档 §10.1。按企业名称或统一社会信用代码检索，多候选时展示企业名称与信用代码让用户选择。
-         */
+        /** 搜索企业 */
         get: operations["searchEnterprises"];
         put?: never;
         post?: never;
@@ -51,10 +68,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * 搜索政策
-         * @description 对应对接文档 §10.2。按政策名称或简称检索，支持中英文引号与常见标点差异。
-         */
+        /** 搜索政策 */
         get: operations["searchPolicies"];
         put?: never;
         post?: never;
@@ -71,10 +85,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * 搜索项目
-         * @description 对应对接文档 §10.3。在指定政策范围内按项目名称检索；`policyQuery` 可选，缺省时在当前纳入匹配的全部政策内检索。
-         */
+        /** 搜索政策项目 */
         get: operations["searchProjects"];
         put?: never;
         post?: never;
@@ -92,8 +103,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 解析匹配对象
-         * @description 对应对接文档 §10.4。可传 `query/enterpriseQuery/policyQuery/projectQuery`。多条结果时按企业、政策和项目名称让用户选择，不要求用户输入内部标识。
+         * 解析匹配结果
+         * @description 可通过 matchId、政策关键词、企业关键词和项目关键词定位匹配结果。
          */
         get: operations["resolveMatches"];
         put?: never;
@@ -112,8 +123,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 企业政策画像
-         * @description 对应对接文档 §7.3。路径变量为 `entUid`（对接文档称 `enterpriseId`）。前端优先使用 `entName/creditCode/province/city/industryCategory/profileItems/missingDataItems/abnormalFields`；`serviceProfile/indicators/missingFields` 为内部字段，前端不直接渲染。
+         * 企业画像上下文
+         * @description 返回企业基础信息、指标画像、可展示画像项和缺失项。ent_reg_status 按 financial_ent_basic_indicator 取值。
          */
         get: operations["getEnterpriseContext"];
         put?: never;
@@ -132,8 +143,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 政策详情与项目条件
-         * @description 对应对接文档 §6.3。返回政策基础信息与 `projects[].conditions[]`。条件字段映射见 §6.3：`indicator` 为指标名称、`compare+fieldVal` 为条件内容、`conditionRole==='must'` 为必要、`sourceClause` 为原文依据。`fieldName/indicatorId/indicatorScore` 为内部字段，前端不展示。
+         * 政策匹配上下文
+         * @description 返回政策基础信息、项目和项目下条件。条件按 project_id + policy_id 交集取得。
          */
         get: operations["getPolicyContext"];
         put?: never;
@@ -154,10 +165,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 企业找政策（实时匹配）
-         * @description 对应对接文档 §7.4。以 `entUid` 或 `enterpriseId` 为企业键实时计算并写入匹配结果。每条结果为“企业 + 政策 + 项目”，政策相同但项目不同必须保留为不同行。注意：DTO 中的 `matchLevels/policyAttribute/sort/pageNum/pageSize` 当前实时流程尚未实际应用，前端不得依赖其做服务端筛选与分页；前端按返回 `items[]` 自行聚合高中低数量。
+         * 企业找政策
+         * @description 按企业实时执行当前政策范围内的匹配，并返回政策-项目匹配结果。
          */
-        post: operations["findPoliciesByEnterprise"];
+        post: operations["matchPoliciesByEnterprise"];
         delete?: never;
         options?: never;
         head?: never;
@@ -175,7 +186,7 @@ export interface paths {
         put?: never;
         /**
          * 政策找企业列表
-         * @description 读取指定政策/项目的最新预计算匹配企业，支持匹配等级、企业名称关键词和分页。分页由后端 PageHelper 处理，返回 `total/pageNum/pageSize/pages/hasNext`。
+         * @description 分页查询某政策或政策项目下最新匹配企业结果。
          */
         post: operations["findEnterprisesByPolicy"];
         delete?: never;
@@ -193,9 +204,9 @@ export interface paths {
         };
         /**
          * 政策找企业统计
-         * @description 统计指定政策/项目下最新预计算匹配结果的高、中、低匹配数量。该接口独立于列表分页，不接收 `pageNum/pageSize`。
+         * @description 返回高/中/低匹配企业数，企业数按 ent_uid 去重。
          */
-        get: operations["summarizeEnterprisesByPolicy"];
+        get: operations["getEnterprisesByPolicySummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -211,10 +222,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * 匹配条件证据
-         * @description 对应对接文档 §6.5。按四态分组展示：`satisfied` 已满足、`unsatisfied` 明确不满足、`unknown` 待补充或待确认、`not_applicable` 不适用。禁止把 `unknown` 归入“不满足”。
-         */
+        /** 匹配证据明细 */
         get: operations["getMatchEvidence"];
         put?: never;
         post?: never;
@@ -231,10 +239,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * 匹配差距与材料提示
-         * @description 对应对接文档 §6.5。`missingData` 为 `evidenceStatus=unknown` 的证据，`unsatisfied` 为 `unsatisfied` 的证据。`materials[]` 当前为通用提示，不是正式材料清单，页面标题应使用“材料准备提示”，不能标成“缺失材料明细”。
-         */
+        /** 匹配缺口诊断 */
         get: operations["getMatchGaps"];
         put?: never;
         post?: never;
@@ -253,11 +258,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * 记录 AI 交互日志（补充接口）
-         * @description 对接文档未将此接口列入前端必接范围，仅作为 AI 交互埋点补充。返回 `data` 为是否写入成功（布尔）。
-         */
-        post: operations["logAiInteraction"];
+        /** 保存 AI 交互日志 */
+        post: operations["saveAiInteraction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -268,542 +270,342 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description 统一响应包装。`code=200` 业务成功；`code=500` 业务失败（HTTP 仍为 200）。前端必须同时检查 HTTP 状态与 `body.code`。 */
-        ApiResponseEnvelope: {
-            /**
-             * @description 200=成功，500=失败。
-             * @example 200
-             */
+        BaseResponse: {
+            /** @example 200 */
             code: number;
-            /**
-             * @description 提示信息；失败时为业务错误说明或错误码（如 `MATCH_NOT_FOUND`）。
-             * @example 操作成功
-             */
+            /** @example 操作成功 */
             msg: string;
-            /** @description 业务数据，失败时为 null。 */
             data?: unknown;
         };
-        DashboardSummaryResponse: components["schemas"]["ApiResponseEnvelope"] & {
+        DashboardSummaryResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["DashboardSummary"];
         };
-        /** @description 首页概览。 */
         DashboardSummary: {
             /** @example 1.0 */
-            schemaVersion: string;
-            kpis: components["schemas"]["DashboardKpis"];
-            /** @description 今日快讯，当前为空数组；空时显示“暂无快讯”。 */
-            news: {
-                [key: string]: unknown;
-            }[];
-            /** @description 重点政策列表。 */
-            topPolicies: components["schemas"]["TopPolicy"][];
-            /** @description 重点企业列表，本期无数据，前端隐藏。 */
-            topEnterprises: {
-                [key: string]: unknown;
-            }[];
+            schemaVersion?: string;
+            kpis?: components["schemas"]["DashboardKpis"];
+            news?: Record<string, never>[];
+            topPolicies?: components["schemas"]["TopPolicy"][];
+            topEnterprises?: components["schemas"]["TopEnterprise"][];
         };
         DashboardKpis: {
-            /**
-             * @description 覆盖政策数（已完成）。
-             * @example 7
-             */
-            activePolicyCount: number;
-            /**
-             * @description 已服务企业数，当前占位 0，前端显示 `--`。
-             * @example 0
-             */
-            servedEnterpriseCount: number;
-            /**
-             * @description 累计匹配分析，当前占位 0，前端显示 `--`。
-             * @example 0
-             */
-            matchAnalysisCount: number;
+            activePolicyCount?: number;
+            servedEnterpriseCount?: number;
+            matchAnalysisCount?: number;
         };
         TopPolicy: {
-            /**
-             * Format: int64
-             * @example 12
-             */
-            policyId: number;
-            /** @example 节能改造补贴 */
-            title: string;
-            /**
-             * @description 政策属性/支持方式。
-             * @example 补贴
-             */
-            policyAttribute?: string | null;
-            /**
-             * Format: int64
-             * @description 申报截止时间，epoch 毫秒。
-             * @example 1718841600000
-             */
-            deadline?: number | null;
-        };
-        EnterpriseSearchResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["EnterpriseSearch"];
-        };
-        EnterpriseSearch: {
-            items: components["schemas"]["EnterpriseSearchItem"][];
-        };
-        EnterpriseSearchItem: {
-            /** @description 企业标识（`entUid`）。 */
-            enterpriseId: string;
-            /** @description 企业名称。 */
-            enterpriseName: string;
-            /** @description 统一社会信用代码。 */
-            creditCode?: string | null;
-        };
-        PolicySearchResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["PolicySearch"];
-        };
-        PolicySearch: {
-            items: components["schemas"]["PolicySearchItem"][];
-        };
-        PolicySearchItem: {
-            /**
-             * Format: int64
-             * @example 12
-             */
-            policyId: number;
-            /** @example 节能改造补贴 */
-            policyName: string;
-            /** @description 政策全称。 */
-            policyFullName?: string | null;
-        };
-        ProjectSearchResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["ProjectSearch"];
-        };
-        ProjectSearch: {
-            items: components["schemas"]["ProjectSearchItem"][];
-        };
-        ProjectSearchItem: {
-            /**
-             * Format: int64
-             * @example 12
-             */
-            policyId: number;
-            /** @example 节能改造补贴 */
-            policyName: string;
-            /**
-             * Format: int64
-             * @example 4
-             */
-            projectId: number;
-            /** @example 节能改造项目 */
-            projectName: string;
-        };
-        MatchResolveResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["MatchResolve"];
-        };
-        MatchResolve: {
-            items: components["schemas"]["MatchResolveItem"][];
-        };
-        MatchResolveItem: {
-            matchId: string;
             /** Format: int64 */
-            policyId: number;
-            policyName: string;
+            policyId?: number;
+            title?: string;
+            policyAttribute?: string;
+            /** Format: date-time */
+            deadline?: string | null;
+            /**
+             * Format: int64
+             * @description 最新匹配结果下去重企业数
+             */
+            matchedEnterpriseCount?: number;
+        };
+        TopEnterprise: {
+            entUid?: string;
+            entName?: string;
+            /** @description 所属产业链节点，多个节点用顿号分隔 */
+            nodeName?: string | null;
+            /**
+             * Format: int64
+             * @description 高匹配政策数，is_latest=1 且 match_level=high 的去重政策数
+             */
+            matchedPolicyCount?: number;
+            maxScore?: number;
+        };
+        ParkPolicyMatchRateResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["ParkPolicyMatchRate"];
+        };
+        ParkPolicyMatchRate: {
+            /** @example 1.0 */
+            schemaVersion?: string;
+            overall?: components["schemas"]["MatchRateStat"];
+            segments?: components["schemas"]["MatchRateStat"][];
+        };
+        MatchRateStat: {
+            /** @enum {string|null} */
+            chainPosition?: "上游" | "中游" | "下游" | null;
             /** Format: int64 */
-            projectId?: number | null;
-            projectName?: string | null;
-            /** @description 企业标识（`entUid`）。 */
-            enterpriseId: string;
-            enterpriseName: string;
+            totalCount?: number;
+            /** Format: int64 */
+            matchedCount?: number;
             /**
              * Format: double
-             * @description 匹配分。
+             * @description 0~1 小数
              */
-            score?: number | null;
-            /**
-             * @description 匹配等级。
-             * @enum {string|null}
-             */
-            matchLevel?: "high" | "medium" | "low" | "none" | null;
+            matchRate?: number;
         };
-        EnterprisePolicyContextResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["EnterprisePolicyContext"];
+        EnterpriseSearchResponse: components["schemas"]["BaseResponse"] & {
+            data?: {
+                items?: components["schemas"]["EnterpriseSearchItem"][];
+            };
         };
-        /** @description 企业政策画像。 */
-        EnterprisePolicyContext: {
-            /** @example 1.0 */
-            schemaVersion: string;
-            /** @description 企业标识。 */
-            entUid: string;
-            /** @description 企业名称。 */
-            entName: string;
-            /** @description 统一社会信用代码。 */
+        EnterpriseSearchItem: {
+            enterpriseId?: string;
+            enterpriseName?: string;
+            creditCode?: string | null;
+        };
+        PolicySearchResponse: components["schemas"]["BaseResponse"] & {
+            data?: {
+                items?: components["schemas"]["PolicySearchItem"][];
+            };
+        };
+        PolicySearchItem: {
+            /** Format: int64 */
+            policyId?: number;
+            policyName?: string;
+            policyFullName?: string | null;
+        };
+        ProjectSearchResponse: components["schemas"]["BaseResponse"] & {
+            data?: {
+                items?: components["schemas"]["ProjectSearchItem"][];
+            };
+        };
+        ProjectSearchItem: {
+            /** Format: int64 */
+            policyId?: number;
+            policyName?: string;
+            /** Format: int64 */
+            projectId?: number;
+            projectName?: string;
+        };
+        MatchResolveResponse: components["schemas"]["BaseResponse"] & {
+            data?: {
+                items?: components["schemas"]["MatchResolveItem"][];
+            };
+        };
+        MatchResolveItem: {
+            matchId?: string;
+            /** Format: int64 */
+            policyId?: number;
+            policyName?: string;
+            /** Format: int64 */
+            projectId?: number;
+            projectName?: string;
+            enterpriseId?: string;
+            enterpriseName?: string;
+            score?: number;
+            matchLevel?: components["schemas"]["MatchLevel"];
+        };
+        EnterpriseContextResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["EnterpriseContext"];
+        };
+        EnterpriseContext: {
+            schemaVersion?: string;
+            entUid?: string;
+            entName?: string;
             creditCode?: string | null;
             province?: string | null;
             city?: string | null;
-            /** @description 行业。 */
             industryCategory?: string | null;
-            /** @description 业务服务画像，内部字段，不是稳定前端契约，前端不直接渲染。 */
-            serviceProfile?: {
-                [key: string]: unknown;
-            } | null;
-            /** @description 内部指标值，前端不直接渲染。 */
+            registeredCapital?: string | null;
+            enterpriseScale?: string | null;
+            serviceProfile?: Record<string, never> | null;
             indicators?: components["schemas"]["EnterpriseIndicatorValue"][];
-            /** @description 业务化画像项，前端展示业务名称、值、来源、更新时间。 */
-            profileItems: components["schemas"]["ProfileItem"][];
-            /** @description 内部缺失字段名列表，前端不直接渲染。 */
-            missingFields: string[];
-            /** @description 业务化缺失数据项，前端可展示。 */
-            missingDataItems: string[];
-            /** @description 异常字段。 */
-            abnormalFields: string[];
+            profileItems?: components["schemas"]["ProfileItem"][];
+            missingFields?: string[];
+            missingDataItems?: string[];
+            abnormalFields?: string[];
         };
-        ProfileItem: {
-            /** @description 业务名称。 */
-            name: string;
-            /** @description 值。 */
-            value?: string | null;
-            /** @description 单位。 */
-            unit?: string | null;
-            /** @description 业务数据状态，如 已核验/已获取/待补充。 */
-            status: string;
-            /** @description 业务数据来源，如 工商登记信息/企业补充信息/待补充。 */
-            source: string;
-            /**
-             * Format: int64
-             * @description 更新时间，epoch 毫秒。
-             */
-            updatedAt?: number | null;
-        };
-        /** @description 企业指标值（内部字段，前端不直接渲染）。 */
         EnterpriseIndicatorValue: {
-            /** @description 内部字段名。 */
             fieldName?: string;
             fieldValue?: string | null;
-            /** @description 缺失时为 `unknown`。 */
             valueType?: string | null;
             unit?: string | null;
-            /** @description 如 financial_ent_basic/policy_enterprise_indicator/missing/derived。 */
             sourceType?: string | null;
             sourceRef?: string | null;
             verifiedStatus?: string | null;
-            /**
-             * Format: int64
-             * @description 更新时间，epoch 毫秒。
-             */
-            updatedAt?: number | null;
+            /** Format: date-time */
+            updatedAt?: string | null;
         };
-        PolicyMatchContextResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["PolicyMatchContext"];
+        ProfileItem: {
+            name?: string;
+            value?: string | null;
+            unit?: string | null;
+            status?: string;
+            source?: string;
+            /** Format: date-time */
+            updatedAt?: string | null;
         };
-        /** @description 政策详情与项目条件。 */
-        PolicyMatchContext: {
-            /** @example 1.0 */
-            schemaVersion: string;
-            /**
-             * Format: int64
-             * @example 12
-             */
-            policyId: number;
-            /** @example 节能改造补贴 */
-            title: string;
-            /** @description 政策全称。 */
+        PolicyContextResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["PolicyContext"];
+        };
+        PolicyContext: {
+            schemaVersion?: string;
+            /** Format: int64 */
+            policyId?: number;
+            title?: string;
             titleFull?: string | null;
-            /** @description 发文文号。 */
             documentNo?: string | null;
-            /** @description 发布单位。 */
             issuingOrg?: string | null;
-            /** @description 地区。 */
             region?: string | null;
-            /** @description 政策级别。 */
             level?: string | null;
-            /** @description 政策属性/支持方式。 */
             policyAttribute?: string | null;
-            /**
-             * Format: int64
-             * @description 申报截止时间，epoch 毫秒；前端可计算剩余天数。
-             */
-            deadline?: number | null;
-            /** @description 申报材料（文本）。 */
+            /** Format: date-time */
+            deadline?: string | null;
             materials?: string | null;
-            /** @description 办理流程（文本）。 */
             process?: string | null;
-            projects: components["schemas"]["PolicyProjectItem"][];
+            projects?: components["schemas"]["PolicyProjectContext"][];
         };
-        PolicyProjectItem: {
-            /**
-             * Format: int64
-             * @example 4
-             */
-            projectId: number;
-            /** @example 节能改造项目 */
-            projectName: string;
-            /** @description 主体类型，如 enterprise。 */
+        PolicyProjectContext: {
+            /** Format: int64 */
+            projectId?: number;
+            projectName?: string;
             subjectType?: string | null;
-            /** @description 条件分组关系，如 OR。 */
             groupsRelation?: string | null;
-            conditions: components["schemas"]["PolicyConditionItem"][];
+            conditions?: components["schemas"]["PolicyCondition"][];
         };
-        /** @description 申报条件。前端展示 `indicator`、`compare+fieldVal`、`conditionRole`、`sourceClause`；不展示 `fieldName/indicatorId/indicatorScore`。 */
-        PolicyConditionItem: {
-            /**
-             * Format: int64
-             * @description 内部标识，不展示。
-             */
-            indicatorId?: number | null;
-            /** @description 指标名称（业务文案）。 */
-            indicator: string;
-            /** @description 内部字段名，不展示。 */
-            fieldName?: string | null;
-            /** @description 比较运算符，如 EQ/GTE 等。 */
-            compare?: string | null;
-            /** @description 条件值/阈值。 */
+        PolicyCondition: {
+            /** Format: int64 */
+            indicatorId?: number;
+            indicator?: string;
+            fieldName?: string;
+            compare?: string;
             fieldVal?: string | null;
-            /**
-             * @description 条件角色。
-             * @enum {string|null}
-             */
-            conditionRole?: "must" | "optional" | null;
-            /** @description 内部评分权重，不展示。 */
+            conditionRole?: string | null;
             indicatorScore?: number | null;
-            /** @description 政策原文依据。 */
             sourceClause?: string | null;
-            /**
-             * @description 条件状态。
-             * @enum {string|null}
-             */
-            matchStatus?: "enabled" | "manual_confirm" | "disabled" | null;
+            matchStatus?: string | null;
         };
-        /** @description 企业找政策请求。仅 `entUid` 或 `enterpriseId` 为必填企业键；其余字段当前实时流程未实际应用。 */
-        FindPoliciesForEnterpriseRequest: {
-            /** @description 企业标识（与 `enterpriseId` 二选一）。 */
-            entUid?: string | null;
-            /** @description 企业标识（与 `entUid` 二选一）。 */
-            enterpriseId?: string | null;
-            entName?: string | null;
-            creditCode?: string | null;
-            /** @description 当前未应用。 */
-            policyAttribute?: string | null;
-            /** @description 当前未应用，前端按返回结果自行聚合。 */
-            matchLevels?: ("high" | "medium" | "low" | "none")[] | null;
-            /** @description 当前未应用。 */
-            sort?: string | null;
-            /** @description 当前未应用。 */
-            pageNum?: number | null;
-            /** @description 当前未应用。 */
-            pageSize?: number | null;
+        FindPoliciesForEnterpriseReq: {
+            entUid?: string;
+            /** @description 兼容字段，和 entUid 二选一 */
+            enterpriseId?: string;
+            entName?: string;
+            creditCode?: string;
+            /** @description 当前实时匹配路径未使用，保留兼容 */
+            policyAttribute?: string;
+            /** @description 当前实时匹配路径未使用，保留兼容 */
+            matchLevels?: components["schemas"]["MatchLevel"][];
+            sort?: string;
+            pageNum?: number;
+            pageSize?: number;
         };
-        /** @description 政策找企业请求。 */
-        FindEnterprisesForPolicyRequest: {
-            /**
-             * Format: int64
-             * @description 政策 ID（必填）。
-             * @example 12
-             */
+        FindEnterprisesForPolicyReq: {
+            /** Format: int64 */
             policyId: number;
-            /**
-             * Format: int64
-             * @description 项目 ID；切换项目时传对应值，不限定传 null。
-             * @example 4
-             */
+            /** Format: int64 */
             projectId?: number | null;
-            /** @description 企业名称关键词，服务端筛选。 */
-            keyword?: string | null;
-            /** @description 匹配等级筛选：high/medium/low，全部传三者。 */
-            matchLevels?: ("high" | "medium" | "low" | "none")[] | null;
-            /** @example 1 */
-            pageNum?: number | null;
-            /** @example 20 */
-            pageSize?: number | null;
+            /** @description 企业名称关键词 */
+            keyword?: string;
+            matchLevels?: components["schemas"]["MatchLevel"][];
+            /** @default 1 */
+            pageNum: number;
+            /** @default 20 */
+            pageSize: number;
         };
-        MatchListResponse: components["schemas"]["ApiResponseEnvelope"] & {
+        MatchListResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["MatchList"];
         };
-        /** @description 匹配结果列表。空结果时 `items=[]` 且 `message` 给出业务化空态文案。 */
         MatchList: {
-            /** @example 1.0 */
-            schemaVersion: string;
-            /** @description 分析批次 ID（企业找政策返回）。 */
+            schemaVersion?: string;
             analysisId?: string | null;
-            items: components["schemas"]["MatchItem"][];
-            /**
-             * Format: int64
-             * @description 政策找企业列表总记录数。
-             */
-            total: number;
-            /** @description 当前页码。 */
-            pageNum: number;
-            /** @description 每页大小。 */
-            pageSize: number;
-            /** @description 总页数。 */
-            pages: number;
-            /** @description 是否还有下一页。 */
-            hasNext: boolean;
-            /** @description 空态业务文案。 */
+            items?: components["schemas"]["MatchItem"][];
+            /** Format: int64 */
+            total?: number | null;
+            pageNum?: number | null;
+            pageSize?: number | null;
+            pages?: number | null;
+            hasNext?: boolean | null;
             message?: string | null;
         };
-        /** @description 一条“企业 + 政策 + 项目”匹配结果。注意：政策找企业接口返回时四态计数为 null、`mainEvidenceSummary` 为空数组；企业找政策接口返回时四态计数与主证据摘要有值。 */
         MatchItem: {
-            /** @description 匹配结果标识。 */
-            matchId: string;
+            matchId?: string;
             /** Format: int64 */
-            policyId: number;
+            policyId?: number;
             /** Format: int64 */
-            projectId: number;
-            policyTitle: string;
-            projectName: string;
-            /** @description 企业标识。 */
-            entUid: string;
-            /** @description 企业名称（政策找企业返回，企业找政策可能为 null）。 */
+            projectId?: number;
+            policyTitle?: string;
+            projectName?: string;
+            entUid?: string;
             entName?: string | null;
-            /**
-             * Format: double
-             * @description 匹配分。
-             */
-            score?: number | null;
-            /**
-             * @description 匹配等级。
-             * @enum {string|null}
-             */
-            matchLevel?: "high" | "medium" | "low" | "none" | null;
-            /**
-             * @description 准入状态。
-             * @enum {string|null}
-             */
-            eligibilityStatus?: "eligible" | "need_confirmation" | "not_eligible" | null;
-            /**
-             * Format: double
-             * @description 置信度。
-             */
-            confidence?: number | null;
-            /** @description 已满足条件数。 */
+            score?: number;
+            matchLevel?: components["schemas"]["MatchLevel"];
+            eligibilityStatus?: string;
+            confidence?: number;
             satisfiedCount?: number | null;
-            /** @description 明确不满足条件数。 */
             unsatisfiedCount?: number | null;
-            /** @description 待补充或待确认条件数。 */
             unknownCount?: number | null;
-            /** @description 不适用条件数。 */
             notApplicableCount?: number | null;
-            /** @description 主证据摘要（前 5 条）。 */
             mainEvidenceSummary?: string[];
         };
-        PolicyEnterpriseMatchSummaryResponse: components["schemas"]["ApiResponseEnvelope"] & {
+        PolicyEnterpriseMatchSummaryResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["PolicyEnterpriseMatchSummary"];
         };
-        /** @description 政策找企业统计，不受列表分页影响。 */
         PolicyEnterpriseMatchSummary: {
-            /** @example 1.0 */
-            schemaVersion: string;
+            schemaVersion?: string;
             /**
              * Format: int64
-             * @example 100
+             * @description 高/中/低匹配去重企业数之和
              */
-            total: number;
-            /**
-             * Format: int64
-             * @example 20
-             */
-            highCount: number;
-            /**
-             * Format: int64
-             * @example 50
-             */
-            mediumCount: number;
-            /**
-             * Format: int64
-             * @example 30
-             */
-            lowCount: number;
+            total?: number;
+            /** Format: int64 */
+            highCount?: number;
+            /** Format: int64 */
+            mediumCount?: number;
+            /** Format: int64 */
+            lowCount?: number;
         };
-        MatchEvidenceResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["MatchEvidence"];
+        MatchEvidenceResponse: components["schemas"]["BaseResponse"] & {
+            data?: {
+                schemaVersion?: string;
+                matchId?: string;
+                items?: components["schemas"]["PolicyMatchEvidence"][];
+            };
         };
-        MatchEvidence: {
-            /** @example 1.0 */
-            schemaVersion: string;
-            matchId: string;
-            items: components["schemas"]["PolicyMatchEvidence"][];
+        MatchGapsResponse: components["schemas"]["BaseResponse"] & {
+            data?: {
+                schemaVersion?: string;
+                matchId?: string;
+                missingData?: components["schemas"]["PolicyMatchEvidence"][];
+                unsatisfied?: components["schemas"]["PolicyMatchEvidence"][];
+                materials?: string[];
+            };
         };
-        MatchGapsResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: components["schemas"]["MatchGaps"];
-        };
-        MatchGaps: {
-            /** @example 1.0 */
-            schemaVersion: string;
-            matchId: string;
-            /** @description `evidenceStatus=unknown` 的证据。 */
-            missingData: components["schemas"]["PolicyMatchEvidence"][];
-            /** @description `evidenceStatus=unsatisfied` 的证据。 */
-            unsatisfied: components["schemas"]["PolicyMatchEvidence"][];
-            /** @description 材料准备提示（通用，非正式材料清单）。 */
-            materials: string[];
-        };
-        /** @description 单条条件证据。前端按 `evidenceStatus` 分组；`fieldName/indicatorId` 为内部字段不展示。 */
         PolicyMatchEvidence: {
-            /**
-             * Format: int64
-             * @description 内部主键。
-             */
-            id?: number | null;
-            matchId?: string | null;
-            /**
-             * Format: int64
-             * @description 内部标识，不展示。
-             */
-            indicatorId?: number | null;
-            /**
-             * @description 四态证据状态。
-             * @enum {string}
-             */
-            evidenceStatus: "satisfied" | "unsatisfied" | "unknown" | "not_applicable";
-            /** @description 企业实际值。 */
+            /** Format: int64 */
+            id?: number;
+            matchId?: string;
+            /** Format: int64 */
+            indicatorId?: number;
+            /** @enum {string} */
+            evidenceStatus?: "satisfied" | "unsatisfied" | "unknown" | "not_applicable";
             enterpriseValue?: string | null;
-            /** @description 政策要求值。 */
             policyValue?: string | null;
-            /**
-             * Format: double
-             * @description 权重。
-             */
-            scoreWeight?: number | null;
-            /**
-             * Format: double
-             * @description 得分。
-             */
-            scoreObtained?: number | null;
-            /** @description 数据来源。 */
+            scoreWeight?: number;
+            scoreObtained?: number;
             dataSource?: string | null;
-            /**
-             * Format: int64
-             * @description 数据时间，epoch 毫秒。
-             */
-            dataTime?: number | null;
-            /** @description 判定原因。 */
+            /** Format: date-time */
+            dataTime?: string | null;
             reason?: string | null;
-            /**
-             * Format: int64
-             * @description 创建时间，epoch 毫秒。
-             */
-            createdAt?: number | null;
-            /** @description 内部字段名，不展示。 */
+            /** Format: date-time */
+            createdAt?: string | null;
             fieldName?: string | null;
-            /** @description 比较运算符。 */
             compare?: string | null;
-            /** @description 指标名称（业务文案）。 */
             indicator?: string | null;
         };
-        /** @description AI 交互日志（补充接口，对接文档未列入前端必接）。 */
-        AiInteractionLogRequest: {
-            sessionId?: string | null;
-            pageType?: string | null;
+        AiInteractionLogReq: {
+            sessionId?: string;
+            pageType?: string;
             /** Format: int64 */
-            policyId?: number | null;
-            entUid?: string | null;
-            questionCategory?: string | null;
-            resultStatus?: string | null;
+            policyId?: number;
+            entUid?: string;
+            questionCategory?: string;
+            resultStatus?: string;
         };
-        BooleanResponse: components["schemas"]["ApiResponseEnvelope"] & {
-            data?: boolean | null;
+        BooleanResponse: components["schemas"]["BaseResponse"] & {
+            data?: boolean;
         };
+        /** @enum {string} */
+        MatchLevel: "high" | "medium" | "low" | "none";
     };
     responses: never;
-    parameters: {
-        /** @description MCP server 到 Java 的服务间调用凭证（仅服务间使用，浏览器/前端不携带）。本期前端联调阶段免鉴权，前端调用无需此头。 */
-        PolicyCopilotServiceTokenHeader: string;
-    };
+    parameters: never;
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -819,7 +621,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 概览数据。业务失败时 `code=500`、`data=null`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -830,13 +632,30 @@ export interface operations {
             };
         };
     };
+    getParkPolicyMatchRate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParkPolicyMatchRateResponse"];
+                };
+            };
+        };
+    };
     searchEnterprises: {
         parameters: {
             query: {
-                /**
-                 * @description 企业名称或统一社会信用代码（关键词）。
-                 * @example 某科技有限公司
-                 */
+                /** @description 企业名称或统一社会信用代码 */
                 query: string;
             };
             header?: never;
@@ -845,7 +664,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 企业候选列表。`query` 为空时 `code=500`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -859,10 +678,7 @@ export interface operations {
     searchPolicies: {
         parameters: {
             query: {
-                /**
-                 * @description 政策名称或简称。
-                 * @example 节能改造
-                 */
+                /** @description 政策名称或政策 ID */
                 query: string;
             };
             header?: never;
@@ -871,7 +687,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 政策候选列表。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -885,15 +701,9 @@ export interface operations {
     searchProjects: {
         parameters: {
             query: {
-                /**
-                 * @description 限定政策名称或政策 ID。
-                 * @example 节能改造补贴
-                 */
+                /** @description 政策名称或政策 ID，可选 */
                 policyQuery?: string;
-                /**
-                 * @description 项目名称或项目 ID。
-                 * @example 节能改造项目
-                 */
+                /** @description 项目名称或项目 ID */
                 query: string;
             };
             header?: never;
@@ -902,7 +712,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 项目候选列表。`query` 为空时 `code=500`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -916,13 +726,9 @@ export interface operations {
     resolveMatches: {
         parameters: {
             query?: {
-                /** @description matchId 或综合关键词。 */
                 query?: string;
-                /** @description 企业名称或统一社会信用代码。 */
                 enterpriseQuery?: string;
-                /** @description 政策名称或政策 ID。 */
                 policyQuery?: string;
-                /** @description 项目名称或项目 ID。 */
                 projectQuery?: string;
             };
             header?: never;
@@ -931,7 +737,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 匹配对象候选列表。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -947,23 +753,20 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /**
-                 * @description 企业标识（`entUid`，对接文档中称 `enterpriseId`）。
-                 * @example 10583BAEC594416585810EE1BF62514A
-                 */
+                /** @description 企业唯一标识 */
                 entUid: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 企业政策画像。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EnterprisePolicyContextResponse"];
+                    "application/json": components["schemas"]["EnterpriseContextResponse"];
                 };
             };
         };
@@ -973,28 +776,25 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /**
-                 * @description 政策 ID。
-                 * @example 12
-                 */
+                /** @description 政策 ID */
                 policyId: number;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 政策上下文。政策不存在时 `code=500`、`msg="政策不存在"`、`data=null`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PolicyMatchContextResponse"];
+                    "application/json": components["schemas"]["PolicyContextResponse"];
                 };
             };
         };
     };
-    findPoliciesByEnterprise: {
+    matchPoliciesByEnterprise: {
         parameters: {
             query?: never;
             header?: never;
@@ -1003,11 +803,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["FindPoliciesForEnterpriseRequest"];
+                "application/json": components["schemas"]["FindPoliciesForEnterpriseReq"];
             };
         };
         responses: {
-            /** @description 匹配结果列表。空结果时 `items=[]` 且 `message="暂无匹配结果，请确认企业画像数据是否存在"`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1027,11 +827,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["FindEnterprisesForPolicyRequest"];
+                "application/json": components["schemas"]["FindEnterprisesForPolicyReq"];
             };
         };
         responses: {
-            /** @description 匹配结果列表。`policyId` 为空时 `code=500`；空结果时 `items=[]` 且 `message` 给出空态文案。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1042,19 +842,11 @@ export interface operations {
             };
         };
     };
-    summarizeEnterprisesByPolicy: {
+    getEnterprisesByPolicySummary: {
         parameters: {
             query: {
-                /**
-                 * @description 政策 ID。
-                 * @example 12
-                 */
                 policyId: number;
-                /**
-                 * @description 项目 ID；不传时统计该政策下全部项目。
-                 * @example 4
-                 */
-                projectId?: number | null;
+                projectId?: number;
             };
             header?: never;
             path?: never;
@@ -1062,7 +854,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 匹配企业统计。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1078,17 +870,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /**
-                 * @description 匹配结果标识。
-                 * @example match_xxx
-                 */
                 matchId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 条件证据列表。`matchId` 不存在时 `code=500`、`msg="MATCH_NOT_FOUND"`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1104,17 +892,13 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /**
-                 * @description 匹配结果标识。
-                 * @example match_xxx
-                 */
                 matchId: string;
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description 差距与材料提示。`matchId` 不存在时 `code=500`、`msg="MATCH_NOT_FOUND"`。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1125,20 +909,20 @@ export interface operations {
             };
         };
     };
-    logAiInteraction: {
+    saveAiInteraction: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["AiInteractionLogRequest"];
+                "application/json": components["schemas"]["AiInteractionLogReq"];
             };
         };
         responses: {
-            /** @description 是否写入成功。 */
+            /** @description 成功 */
             200: {
                 headers: {
                     [name: string]: unknown;

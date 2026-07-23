@@ -206,8 +206,8 @@ function EnterprisePage() {
     city: context?.city,
     industry: context?.industryCategory,
     founded: profileValue("成立年限"),
-    capital: null,
-    scale: profileValue("企业规模"),
+    capital: context?.registeredCapital,
+    scale: context?.enterpriseScale ?? profileValue("企业规模"),
     status: "培育中",
   }
   const matchOverview = [
