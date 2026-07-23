@@ -1,4 +1,5 @@
 import { agentConfig } from "./agent-config"
+import { createUuid } from "./uuid"
 
 export type PolicyPageContext =
   | {
@@ -177,7 +178,7 @@ export function sendAgentMessage(
     body: JSON.stringify({
       session_id: sessionId,
       content,
-      idempotency_key: crypto.randomUUID(),
+      idempotency_key: createUuid(),
       file_ids: fileIds,
       web_search_enabled: false,
     }),

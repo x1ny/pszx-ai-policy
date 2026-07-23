@@ -22,6 +22,7 @@ import {
   type AguiEvent,
 } from "@/lib/agent-client"
 import { buildPolicyPageContext } from "@/lib/vela-context"
+import { createUuid } from "@/lib/uuid"
 
 const suggestions = [
   "当前政策匹配整体情况如何？",
@@ -130,7 +131,7 @@ export function DashboardSidebar() {
           )
         }
 
-        const nextId = messageId || `assistant_${crypto.randomUUID()}`
+        const nextId = messageId || `assistant_${createUuid()}`
         assistantMessageIdRef.current = nextId
         return [...current, { id: nextId, role: "assistant", content: delta }]
       })
@@ -145,7 +146,7 @@ export function DashboardSidebar() {
         location.search as Record<string, unknown>
       )
       const userMessage: AgentMessage = {
-        id: `user_${crypto.randomUUID()}`,
+        id: `user_${createUuid()}`,
         role: "user",
         content,
       }
@@ -178,7 +179,7 @@ export function DashboardSidebar() {
                 const assistantMessageId =
                   event.messageId ||
                   event.message_id ||
-                  `assistant_${crypto.randomUUID()}`
+                  `assistant_${createUuid()}`
                 assistantMessageIdRef.current = assistantMessageId
                 setMessages((current) => {
                   if (current.some((message) => message.id === assistantMessageId)) {
